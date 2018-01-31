@@ -27,9 +27,9 @@ It's distributed under the [Mozilla Public License v2.0][2] (see the accompanyin
 
 ## Build requirements
 
-A modern C++ compiler anc `cmake` (https://cmake.org/).
+A modern C++ compiler and `cmake` (https://cmake.org/).
 
-Just compile the `testudo.cpp` file:
+Just type:
 
 ```shell
 cd testudo/src
