@@ -1,0 +1,121 @@
+/*
+ *  This file is part of TESTUDO.
+ *
+ *  Copyright (C) 2018 Manlio Morini.
+ *
+ *  This Source Code Form is subject to the terms of the Mozilla Public
+ *  License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ *  You can obtain one at http://mozilla.org/MPL/2.0/
+ */
+
+#if !defined(TESTUDO_STATE_H)
+#define      TESTUDO_STATE_H
+
+#include "move.h"
+
+namespace testudo
+{
+
+class state
+{
+public:
+  enum class setup {start, empty};
+  enum class kind {standard,
+                   draw_stalemate, draw_repetition, draw_fifty,
+                   mated};
+  enum castle_flags {white_kingside = 1, white_queenside = 2,
+                     black_kingside = 4, black_queenside = 8};
+
+  // Chess initial state.
+  explicit state(setup = setup::start) noexcept;
+  // Sets up the board given a FEN description.
+  explicit state(const std::string &);
+
+  // Generates the set of legal moves.
+  std::vector<move> moves() const;
+  // Generates the set of legal captures.
+  std::vector<move> captures() const;
+
+  // Makes a move.
+  // If the move is illegal, undoes whatever it did and returns the initial
+  // state; otherwise, it returns the updated state.
+  state after_move(const move &) const;
+  bool make_move(const move &);
+
+  // Returns `true` if square is being attacked by color, `false` otherwise.
+  bool attack(square, color) const;
+
+  // Returns `true` if the specified color is in check.
+  bool in_check(color) const;
+  bool in_check() const { return in_check(side()); }
+
+  kind mate_or_draw() const;
+
+  piece operator[](square s) const noexcept { return board_[s]; }
+
+  // Fifty moves draw counter value.
+  auto fifty() const noexcept { return fifty_; }
+  // En passant square.
+  square en_passant() const noexcept { return ep_; }
+  // Side to move.
+  color side() const noexcept { return stm_; }
+  // Castle rights.
+  auto castle() const noexcept { return castle_; }
+
+  move parse_move(const std::string &) const;
+
+  hash_t hash() const noexcept { return hash_; }
+  unsigned repetitions() const noexcept;
+
+private:
+  void add_m(std::vector<move> &, square from, square to,
+             decltype(move::flags) flags) const;
+  void add_pawn_m(std::vector<move> &, square from, square to,
+                  decltype(move::flags) flags) const;
+  void add_pawn_captures(std::vector<move> &, square) const;
+  void add_en_passant(std::vector<move> &) const;
+  void clear_square(square);
+  void fill_square(piece, square);
+
+  friend bool operator==(const state &, const state &);
+
+  static const square mailbox[120];
+  static const int mailbox64[64];
+  static const std::array<int, 2> pawn_capture[2];
+  static const int pawn_fwd[2];
+
+  std::array<piece, 64> board_; // piece+color or EMPTY
+  color stm_;                   // side to move
+  unsigned castle_;             // castle permissions
+  square ep_;                   // en passant square
+  unsigned fifty_;              // handles the fifty-move-draw rule
+
+  square king_[2];
+  hash_t hash_;
+
+  std::vector<hash_t> previous_states_;  // used for repetition detection
+};
+
+inline bool operator==(const state &lhs, const state &rhs)
+{
+  return lhs.board_ == rhs.board_ && lhs.side() == rhs.side()
+         && lhs.castle() == rhs.castle()
+         && lhs.en_passant() == rhs.en_passant() && lhs.fifty() == rhs.fifty();
+}
+inline bool operator!=(const state &lhs, const state &rhs)
+{
+  return !(lhs == rhs);
+}
+
+inline state state::after_move(const move &m) const
+{
+  state after(*this);
+  after.make_move(m);
+  return after;
+}
+
+std::ostream &operator<<(std::ostream &, const state &);
+
+}  // namespace state
+
+#endif  // include guard

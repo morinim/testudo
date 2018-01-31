@@ -1,0 +1,11 @@
+# Temporary files
+*.P
+*.o
+*.*~
+*.a
+
+# Executables
+src/build/
+
+# Misc files
+misc/
