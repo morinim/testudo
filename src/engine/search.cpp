@@ -311,7 +311,6 @@ move search::operator()(bool verbose)
 {
   search_time_.restart();
   tt_->inc_age();
-
   stats.reset();
 
   score alpha(-INF), beta(+INF);
