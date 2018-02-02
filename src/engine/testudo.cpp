@@ -23,8 +23,8 @@ namespace testudo
 class game
 {
 public:
-  game() : current_state(), show_search_info(true), tt_(), previous_states_(),
-           computer_side_(-1), max_depth_(0), time_info_()
+  game() : current_state(), show_search_info(true), ics(false), tt_(),
+           previous_states_(), computer_side_(-1), max_depth_(0), time_info_()
   {}
 
   bool make_move(const move &m)
@@ -75,6 +75,7 @@ public:
 
   state current_state;
   bool show_search_info;
+  bool ics;
 
 private:
   cache tt_;
@@ -104,7 +105,6 @@ private:
     unsigned moves_left;
     std::chrono::milliseconds time_left;
   } time_info_;
-
 };  // class game
 
 // Runs the search algoritm on the current position (given the active search
@@ -123,13 +123,6 @@ move game::think(bool verbose)
 void game::time_info::level(unsigned moves, std::chrono::milliseconds time)
 {
   using namespace std::chrono_literals;
-
-  // Covers a special rule on some ICS implementations: if you ask for a game
-  // with `base=0`, the clocks really start at 10 seconds instead of 0. xboard
-  // itself doesn't know about this rule, so it passes the 0 on to the engine
-  // instead of changing it to 0:10.
-  if (time == 0ms)
-    time = 10s;
 
   std::cout << "# Setting time control to " << moves << ' '
             << std::chrono::duration_cast<std::chrono::seconds>(time).count()
@@ -159,6 +152,10 @@ std::chrono::milliseconds game::time_info::time_for_next_move()
   if (time_left == 0ms)
     time_left = 100ms;
 
+  // Simplest situation: fixed time per move (if `max_time == 0` there isn't a
+  // time limit).
+  if (!moves_per_tc && tc == 0ms)
+    return max_time;
   // SUDDEN-DEATH TIME CONTROL (play the whole game in a fixed period).
   // > It can be handled by always considering that X moves always remain until
   // > the time control.  Let's say that you pick the number 30 as X. You'll
@@ -169,7 +166,7 @@ std::chrono::milliseconds game::time_info::time_for_next_move()
   // > So this is a lot easier to implement than the tournament time control
   // > logic.
   // (Bruce Moreland)
-  if (!moves_per_tc)
+  else if (!moves_per_tc)
   {
     t = time_left / 30;
   }
@@ -240,8 +237,35 @@ void print_move_or_result(const state &s, const move &m)
   }
 }
 
+std::chrono::seconds xboard_time(const std::string &s)
+{
+  const auto split([](const std::string &t, char delim = ':')
+                   {
+                     std::vector<std::string> ret;
+                     std::istringstream ss(t);
+                     std::string item;
+                     while (std::getline(ss, item, delim))
+                       ret.push_back(item);
+                     return ret;
+                   });
+
+  const auto parts(split(s));
+
+  int seconds;
+  switch (parts.size())
+  {
+  case 2:  seconds = stoi(parts[0]) * 60 + stoi(parts[1]);  break;
+  case 1:  seconds = stoi(parts[0]) * 60;                   break;
+  default:                                                  break;
+  }
+
+  return std::chrono::seconds(seconds);
+}
+
 void loop()
 {
+  using namespace std::chrono_literals;
+
   game g;
 
   for (;;)
@@ -263,7 +287,7 @@ void loop()
 
     std::string line;
     while (!std::getline(std::cin, line))
-      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      std::this_thread::sleep_for(500ms);
 
     std::istringstream is(line);
     std::string cmd;
@@ -290,12 +314,30 @@ void loop()
         std::cout << "Hint: " << m << std::endl;
       continue;
     }
+    if (cmd == "ics")
+    {
+      std::string server;  is >> server;
+      g.ics = (server != "-");
+      std::cout << "# Setting ICS server to: " << g.ics << std::endl;
+      continue;
+    }
     if (cmd == "level")
     {
-      unsigned moves;  is >> moves;
-      unsigned  time;  is >>  time;
+      unsigned    moves;  is >> moves;
+      std::string stime;  is >> stime;
+      auto time(xboard_time(stime));
 
-      g.level(moves, std::chrono::minutes(time));
+      // Covers a special rule on some ICS implementations: if you ask for a
+      // game with `base=0`, the clocks really start at 10 seconds instead of
+      // 0. xboard itself doesn't know about this rule, so it passes the 0 on
+      // to the engine instead of changing it to 0:10.
+      if (g.ics && time == 0s)
+      {
+        time = 10s;
+        std::cout << "Adjusting time to 10s" << std::endl;
+      }
+
+      g.level(moves, time);
       continue;
     }
     if (cmd == "new")
@@ -314,7 +356,7 @@ void loop()
     {
       int version;  is >> version;  // skips version
       std::cout << "feature myname=\"TESTUDO 0.9\" playother=1 sigint=0 "
-                   "colors=0 setboard=1 debug=1 done=1" << std::endl;
+                   "colors=0 setboard=1 ics=1 debug=1 done=1" << std::endl;
       continue;
     }
     if (cmd == "playother")
