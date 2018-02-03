@@ -97,7 +97,7 @@ const decltype(state().castle()) castle_mask[64] =
   13, 15, 15, 15, 12, 15, 15, 14
 };
 
-}  // anonymous namespace
+}  // unnamed namespace
 
 std::ostream &operator<<(std::ostream &o, const state &s)
 {

@@ -17,19 +17,64 @@
 namespace testudo
 {
 
+namespace detail
+{
+extern score pcsq_m_[piece::sup_id][64];
+extern score pcsq_e_[piece::sup_id][64];
+}
+
 class parameters
 {
 public:
   parameters();
 
-  score pcsq_e(piece p, square s) const { return pcsq_e_[p.id()][s]; }
-  score pcsq_m(piece p, square s) const { return pcsq_m_[p.id()][s]; }
+  score pcsq_e(piece p, square s) const { return detail::pcsq_e_[p.id()][s]; }
+  score pcsq_m(piece p, square s) const { return detail::pcsq_m_[p.id()][s]; }
 
 private:
-  // Piece/square values for middle game.
-  static score pcsq_m_[][64];
-  // Piece/square values for end game.
-  static score pcsq_e_[][64];
+  bool load();
+
+  void pcsq_init();
+
+  // Naming conventions:
+  // 1. fixed prefix (`pcsq_` standing for PieCe SQuare)
+  // 2. piece type (`pawn_`, `knight_`...)
+  // 3. type (`centre_`, `rank_`, `file_`...)
+  // 4. kind (`base_`, `mult_`, `weight_`...)
+  // 5. phase (`e_` end-game, `m_` opening/middle-game). If missing the
+  //    parameter isn't phase specific
+  static score pcsq_pawn_file_mult_m_;                   // [  1;  10]
+  static score pcsq_knight_centre_mult_e_;               // [  1;  10]
+  static score pcsq_knight_centre_mult_m_;               // [  1;  10]
+  static score pcsq_knight_rank_mult_m_;                 // [  1;  10]
+  static score pcsq_bishop_centre_mult_e_;               // [  1;  10]
+  static score pcsq_bishop_centre_mult_m_;               // [  1;  10]
+  static score pcsq_rook_file_mult_m_;                   // [  1;  10]
+  static score pcsq_queen_centre_mult_e_;                // [  1;  10]
+  static score pcsq_queen_centre_mult_m_;                // [  1;  10]
+  static score pcsq_king_centre_mult_e_;                 // [  1;  20]
+  static score pcsq_king_file_mult_m_;                   // [  1;  20]
+  static score pcsq_king_rank_mult_m_;                   // [  1;  20]
+
+  static std::array<score, 4> pcsq_pawn_file_base_;      // [-20;  20]
+  static std::array<score, 4> pcsq_knight_centre_base_;  // [-20;  20]
+  static std::array<score, 8> pcsq_knight_rank_base_;    // [-20;  20]
+  static std::array<score, 4> pcsq_bishop_centre_base_;  // [-20;  20]
+  static std::array<score, 4> pcsq_rook_file_base_;      // [-20;  20]
+  static std::array<score, 4> pcsq_queen_centre_base_;   // [-20;  20]
+  static std::array<score, 4> pcsq_king_centre_base_;    // [-20;  20]
+  static std::array<score, 4> pcsq_king_file_base_;      // [-20;  20]
+  static std::array<score, 8> pcsq_king_rank_base_;      // [-20;  20]
+
+  static score pcsq_knight_backrank_base_m_;             // [  0;  20]
+  static score pcsq_knight_trapped_base_m_;              // [  0; 120]
+  static score pcsq_bishop_backrank_base_m_;             // [  0;  20]
+  static score pcsq_bishop_diagonal_base_m_;             // [  0;  20]
+  static score pcsq_queen_backrank_base_m_;              // [  0;  20]
+
+  static score pcsq_pawn_weight_;                        // [  0; 200]
+  static score pcsq_piece_weight_;                       // [  0; 200]
+  static score pcsq_king_weight_;                        // [  0; 200]
 };  // class parameters
 
 extern parameters db;
