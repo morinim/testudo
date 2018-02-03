@@ -35,15 +35,17 @@ public:
 
   constexpr ID id() const noexcept { return id_; }
 
+  // Color of the piece (i.e. `BPAWN.color() == BLACK`).
+  constexpr testudo::color color() const noexcept;
+
+  // Piece type (i.e. `BPAWN.type() == type::pawn`).
+  constexpr enum type type() const noexcept;
+
   // When `!slide()` a piece can only move one square in any one direction.
   constexpr bool slide() const noexcept;
 
   // Directions the piece can move in.
-  const std::initializer_list<int> &offsets() const noexcept;
-
-  constexpr testudo::color color() const noexcept { return id() & 1; }
-  constexpr enum type type() const noexcept
-  { return static_cast<enum type>(id() >> 1); }
+  constexpr const auto &offsets() const noexcept;
 
   constexpr score value() const noexcept;
 
@@ -54,6 +56,24 @@ public:
 private:
   static constexpr ID sup_id = 14;
 
+  static constexpr std::initializer_list<int> offsets_[sup_id] =
+  {
+    {}, {},
+    {}, {},
+    {-11, -10,  -9, -1, 1,  9, 10, 11},
+    {-11, -10,  -9, -1, 1,  9, 10, 11},
+    {-21, -19, -12, -8, 8, 12, 19, 21},
+    {-21, -19, -12, -8, 8, 12, 19, 21},
+    {-11,  -9,   9, 11},
+    {-11,  -9,   9, 11},
+    {-10,  -1,   1, 10},
+    {-10,  -1,   1, 10},
+    {-11, -10,  -9, -1, 1,  9, 10, 11},
+    {-11, -10,  -9, -1, 1,  9, 10, 11},
+  };
+
+  static constexpr score value_[sup_id] = {0, 100, 10000, 345, 355, 525, 1000};
+
   ID id_;
 };
 
@@ -61,7 +81,7 @@ private:
 //     (type << 1) | color
 // `type` (3 bits) is assigned so that:
 // - the most significant bit is set for sliding pieces;
-// - pieces a Pawn can be promoted to have `type > 2`.
+// - pieces a Pawn can be promoted to have `type() > 2`.
 constexpr piece   EMPTY(0b0000);
 //        piece  UNUSED(0b0001);
 constexpr piece   BPAWN(0b0010);
@@ -77,18 +97,14 @@ constexpr piece   WROOK(0b1011);
 constexpr piece  BQUEEN(0b1100);
 constexpr piece  WQUEEN(0b1101);
 
-inline constexpr bool operator==(piece lhs, piece rhs)
+inline constexpr testudo::color piece::color() const noexcept
 {
-  return lhs.id() == rhs.id();
-}
-inline constexpr bool operator!=(piece lhs, piece rhs)
-{
-  return !(lhs == rhs);
+  return id() & 1;
 }
 
-inline std::ostream &operator<<(std::ostream &o, piece p)
+inline constexpr enum piece::type piece::type() const noexcept
 {
-  return o << p.letter();
+  return static_cast<enum type>(id() >> 1);
 }
 
 inline constexpr bool piece::slide() const noexcept
@@ -96,32 +112,13 @@ inline constexpr bool piece::slide() const noexcept
   return id() & 0b1000;
 }
 
-inline const std::initializer_list<int> &piece::offsets() const noexcept
+inline constexpr const auto &piece::offsets() const noexcept
 {
-  static const std::initializer_list<int> offsets_[sup_id] =
-  {
-    {}, {},
-    {}, {},
-    {-11, -10,  -9, -1, 1,  9, 10, 11},
-    {-11, -10,  -9, -1, 1,  9, 10, 11},
-    {-21, -19, -12, -8, 8, 12, 19, 21},
-    {-21, -19, -12, -8, 8, 12, 19, 21},
-    {-11,  -9,   9, 11},
-    {-11,  -9,   9, 11},
-    {-10,  -1,   1, 10},
-    {-10,  -1,   1, 10},
-    {-11, -10,  -9, -1, 1,  9, 10, 11},
-    {-11, -10,  -9, -1, 1,  9, 10, 11},
-  };
   return offsets_[id()];
 }
 
 inline constexpr score piece::value() const noexcept
 {
-  constexpr score value_[sup_id] =
-  {
-    0, 100, 10000, 345, 355, 525, 1000
-  };
   return value_[type()];
 }
 
@@ -141,6 +138,20 @@ inline hash_t piece::hash(square i) const noexcept
     random::fill2d<std::array<std::array<hash_t, 64>, piece::sup_id>>();
 
   return hash_[id()][i];
+}
+
+inline constexpr bool operator==(piece lhs, piece rhs)
+{
+  return lhs.id() == rhs.id();
+}
+inline constexpr bool operator!=(piece lhs, piece rhs)
+{
+  return !(lhs == rhs);
+}
+
+inline std::ostream &operator<<(std::ostream &o, piece p)
+{
+  return o << p.letter();
 }
 
 }  // namespace testudo
