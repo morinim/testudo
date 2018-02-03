@@ -248,9 +248,13 @@ move search::operator()(bool verbose)
   score alpha(-INF), beta(+INF);
 
   move best_move(move::sentry());
-  for (int i(1), max(max_depth ? max_depth : 1000); i <= max;)
+
+  stats.depth = 0;
+  for (unsigned max(max_depth ? max_depth : 1000);
+       stats.depth <= max;
+       ++stats.depth)
   {
-    auto x(alphabeta(root_state_, alpha, beta, 0, i * PLY));
+    auto x(alphabeta(root_state_, alpha, beta, 0, stats.depth * PLY));
 
     if (search_stopped_)
       break;
@@ -271,8 +275,8 @@ move search::operator()(bool verbose)
 
     if (verbose)
     {
-      std::cout << i << ' ' << x << ' ' << search_time_.elapsed().count() / 10
-                << ' ' << stats.snodes;
+      std::cout << stats.depth << ' ' << x << ' '
+                << search_time_.elapsed().count() / 10 << ' ' << stats.snodes;
 
       for (const auto &m : pv)
         std::cout << ' ' << m;
@@ -282,8 +286,6 @@ move search::operator()(bool verbose)
 
     if (is_mate(x))
       break;
-
-    ++i;
   }
 
   return best_move;

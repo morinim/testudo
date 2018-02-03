@@ -34,16 +34,17 @@ public:
 
   struct statistics
   {
-    statistics() : snodes(0), qnodes(0) {}
+    statistics() : snodes(0), qnodes(0), depth(0) {}
 
     void reset() { *this = statistics(); }
 
-    std::uintmax_t snodes;
-    std::uintmax_t qnodes;
+    std::uintmax_t snodes;  // search nodes
+    std::uintmax_t qnodes;  // quiescence search nodes
+    unsigned        depth;  // depth reached
   } stats;
 
   std::chrono::milliseconds max_time;
-  unsigned max_depth;
+  unsigned                 max_depth;
 
 private:
   static constexpr int PLY = 16;
