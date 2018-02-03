@@ -17,6 +17,9 @@
 namespace testudo
 {
 
+namespace
+{
+
 // The so called "mailbox" array (because it looks like a mailbox?). It's
 // useful to figure out what pieces can go where.
 //
@@ -40,23 +43,23 @@ namespace testudo
 // > subtract 1 from 61 (60) and see what `mailbox[60]` is. In this case, it's
 // > `-1`, so it's out of bounds and we can forget it.
 // (Tom Kerrigan)
-const square state::mailbox[120] =
+const square mailbox[120] =
 {
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, A8, B8, C8, D8, E8, F8, G8, H8, -1,
-  -1,  8,  9, 10, 11, 12, 13, 14, 15, -1,
-  -1, 16, 17, 18, 19, 20, 21, 22, 23, -1,
-  -1, 24, 25, 26, 27, 28, 29, 30, 31, -1,
-  -1, 32, 33, 34, 35, 36, 37, 38, 39, -1,
-  -1, 40, 41, 42, 43, 44, 45, 46, 47, -1,
-  -1, 48, 49, 50, 51, 52, 53, 54, 55, -1,
+  -1, A7, B7, C7, D7, E7, F7, G7, H7, -1,
+  -1, A6, B6, C6, D6, E6, F6, G6, H6, -1,
+  -1, A5, B5, C5, D5, E5, F5, G5, H5, -1,
+  -1, A4, B4, C4, D4, E4, F4, G4, H4, -1,
+  -1, A3, B3, C3, D3, E3, F3, G3, H3, -1,
+  -1, A2, B2, C2, D2, E2, F2, G2, H2, -1,
   -1, A1, B1, C1, D1, E1, F1, G1, H1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 };
 
-const int state::mailbox64[/* here goes a `square` */] =
+const std::size_t mailbox64[/* here goes a `square` */] =
 {
   21, 22, 23, 24, 25, 26, 27, 28,
   31, 32, 33, 34, 35, 36, 37, 38,
@@ -68,13 +71,33 @@ const int state::mailbox64[/* here goes a `square` */] =
   91, 92, 93, 94, 95, 96, 97, 98
 };
 
-// Forward moving offset for a Pawn of a specific color.
-const int state::pawn_fwd[2] = {8, -8};
-
-const std::array<int, 2> state::pawn_capture[2] =
+const std::array<int, 2> pawn_capture[2] =
 {
   {{9, 11}}, {{-11, -9}}
 };
+
+// Forward moving offset for a Pawn of a specific color.
+const int pawn_fwd[2] = {8, -8};
+
+// Used to determine the castling permissions after a move. What we do is
+// logical-AND the castle bits with the castle_mask bits for both of the
+// move's squares. Let's say `castle_` is `white_kingside` (`1`). Now we play
+// a move where the rook on H1 gets captured. We AND castle with
+// `castle_mask[H1]`, so we have `white_kingside & 14`, and `castle_` becomes
+// `0` and WHITE can't castle kingside anymore.
+const decltype(state().castle()) castle_mask[64] =
+{
+   7, 15, 15, 15,  3, 15, 15, 11,
+  15, 15, 15, 15, 15, 15, 15, 15,
+  15, 15, 15, 15, 15, 15, 15, 15,
+  15, 15, 15, 15, 15, 15, 15, 15,
+  15, 15, 15, 15, 15, 15, 15, 15,
+  15, 15, 15, 15, 15, 15, 15, 15,
+  15, 15, 15, 15, 15, 15, 15, 15,
+  13, 15, 15, 15, 12, 15, 15, 14
+};
+
+}  // anonymous namespace
 
 std::ostream &operator<<(std::ostream &o, const state &s)
 {
@@ -100,7 +123,7 @@ state::state(setup t) noexcept
     castle_(white_kingside|white_queenside|black_kingside|black_queenside),
     ep_(-1), fifty_(0), king_(), hash_(), previous_states_()
 {
-  static const std::array<piece, 64> init_piece =
+  static const std::array<piece, 64> init_piece(
   {{
     BROOK, BKNIGHT, BBISHOP, BQUEEN, BKING, BBISHOP, BKNIGHT, BROOK,
     BPAWN,   BPAWN,   BPAWN,  BPAWN, BPAWN,   BPAWN,   BPAWN, BPAWN,
@@ -110,7 +133,7 @@ state::state(setup t) noexcept
     EMPTY,   EMPTY,   EMPTY,  EMPTY, EMPTY,   EMPTY,   EMPTY, EMPTY,
     WPAWN,   WPAWN,   WPAWN,  WPAWN, WPAWN,   WPAWN,   WPAWN, WPAWN,
     WROOK, WKNIGHT, WBISHOP, WQUEEN, WKING, WBISHOP, WKNIGHT, WROOK
-  }};
+  }});
 
   if (t == setup::start)
   {
@@ -268,8 +291,6 @@ void state::add_en_passant(std::vector<move> &moves) const
 
 std::vector<move> state::moves() const
 {
-  static const decltype(rank(0)) base_rank[2] = {6, 1};
-
   std::vector<move> ret;
 
   const auto add([&](square from, square to, decltype(move::flags) flags)
@@ -286,7 +307,7 @@ std::vector<move> state::moves() const
     {
       add_pawn_m(ret, i, to, move::pawn);
 
-      if (rank(i) == base_rank[side()])
+      if (rank(i) == pawn_base_rank(side()))
       {
         to += pawn_fwd[side()];
         if (board_[to] == EMPTY)
@@ -449,24 +470,6 @@ void state::fill_square(piece p, square i)
 bool state::make_move(const move &m)
 {
   assert (!m.is_sentry());
-
-  // Used to determine the castling permissions after a move. What we do is
-  // logical-AND the castle bits with the castle_mask bits for both of the
-  // move's squares. Let's say `castle_` is `white_kingside` (`1`). Now we play
-  // a move where the rook on H1 gets captured. We AND castle with
-  // `castle_mask[H1]`, so we have `white_kingside & 14`, and `castle_` becomes
-  // `0` and WHITE can't castle kingside anymore.
-  static const decltype(castle_) castle_mask[64] =
-  {
-     7, 15, 15, 15,  3, 15, 15, 11,
-    15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15,
-    13, 15, 15, 15, 12, 15, 15, 14
-  };
 
   previous_states_.push_back(hash());
 

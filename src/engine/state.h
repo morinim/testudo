@@ -80,11 +80,6 @@ private:
 
   friend bool operator==(const state &, const state &);
 
-  static const square mailbox[120];
-  static const int mailbox64[64];
-  static const std::array<int, 2> pawn_capture[2];
-  static const int pawn_fwd[2];
-
   std::array<piece, 64> board_; // piece+color or EMPTY
   color stm_;                   // side to move
   unsigned castle_;             // castle permissions
@@ -97,22 +92,23 @@ private:
   std::vector<hash_t> previous_states_;  // used for repetition detection
 };
 
+inline state state::after_move(const move &m) const
+{
+  state after(*this);
+  after.make_move(m);
+  return after;
+}
+
 inline bool operator==(const state &lhs, const state &rhs)
 {
   return lhs.board_ == rhs.board_ && lhs.side() == rhs.side()
          && lhs.castle() == rhs.castle()
          && lhs.en_passant() == rhs.en_passant() && lhs.fifty() == rhs.fifty();
 }
+
 inline bool operator!=(const state &lhs, const state &rhs)
 {
   return !(lhs == rhs);
-}
-
-inline state state::after_move(const move &m) const
-{
-  state after(*this);
-  after.make_move(m);
-  return after;
 }
 
 std::ostream &operator<<(std::ostream &, const state &);
