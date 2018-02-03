@@ -25,49 +25,56 @@ struct fen_test_case
   std::vector<std::uintmax_t> captures;
 };
 
-const std::vector<fen_test_case> test_set =
+const std::vector<fen_test_case> &test_set()
 {
+  // Directly accessing the `ts` array can be problematic (because of static
+  // initialization order fiasco).
+  static const std::vector<fen_test_case> ts(
   {
-    state("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
-    {20, 400, 8902, 197281, /*4865609, 119060324, 3195901860, 84998978956 */},
-    {0, 0, 34, 1576, /* 82719, 2812008 */}
-  },
-  {
-    state(  // so called 'Kiwipete' by Peter McKenzie
-      "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -"),
-    {48, 2039, 97862, /* 4085603, 193690690 */},
-    {8, 351, 17102, /* 757163, 35043416 */}
-  },
-  {
-    state("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -"),
-    {14, 191, 2812, 43238, 674624, /* 11030083, 178633661 */},
-    {1, 14, 209, 3348, 52051, /* 940350, 14519036 */}
-  },
-  {
-    state(  // by Steven Edwards
-      "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"),
-    {6, 264, 9467, 422333, /* 15833292, 706045033 */},
-    {0, 87, 1021, 131393, /* 2046173, 210369132 */}
-  },
-  {
-    state("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"),
-    {44, 1486, 62379, /* 2103487, 89941194 */},
-    {}
-  },
-  {
-    state(  // by Steven Edwards
-      "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1"
-      " w - - 0 10"),
-    {46, 2079, 89890, /* 3894594, 164075551, 6923051137, 287188994746 */},
-    {}
-  },
-  {
-    state(  // Position with 218 legal moves (!) reported by Scott Gasch
-      "3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - - 0 1"),
-    {218},
-    {}
-  }
-};
+    {
+      state("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
+      {20, 400, 8902, 197281, /*4865609, 119060324, 3195901860, 84998978956*/},
+      {0, 0, 34, 1576, /* 82719, 2812008 */}
+    },
+    {
+      state(  // so called 'Kiwipete' by Peter McKenzie
+        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -"),
+      {48, 2039, 97862, /* 4085603, 193690690 */},
+      {8, 351, 17102, /* 757163, 35043416 */}
+    },
+    {
+      state("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -"),
+      {14, 191, 2812, 43238, 674624, /* 11030083, 178633661 */},
+      {1, 14, 209, 3348, 52051, /* 940350, 14519036 */}
+    },
+    {
+      state(  // by Steven Edwards
+        "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"),
+      {6, 264, 9467, 422333, /* 15833292, 706045033 */},
+      {0, 87, 1021, 131393, /* 2046173, 210369132 */}
+    },
+    {
+      state("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"),
+      {44, 1486, 62379, /* 2103487, 89941194 */},
+      {}
+    },
+    {
+      state(  // by Steven Edwards
+        "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1"
+        " w - - 0 10"),
+      {46, 2079, 89890, /* 3894594, 164075551, 6923051137, 287188994746 */},
+      {}
+    },
+    {
+      state(  // Position with 218 legal moves (!) reported by Scott Gasch
+        "3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - - 0 1"),
+      {218},
+      {}
+    }
+  });
+
+  return ts;
+}
 
 enum class perft_type {all, capture};
 
@@ -332,14 +339,14 @@ TEST_CASE("move")
 
 TEST_CASE("perft")
 {
-  for (const auto &test : test_set)
+  for (const auto &test : test_set())
     for (unsigned i(0); i < test.moves.size(); ++i)
       CHECK(perft<perft_type::all>(test.state, i + 1) == test.moves[i]);
 }
 
 TEST_CASE("perft_captures")
 {
-  for (const auto &test : test_set)
+  for (const auto &test : test_set())
     for (unsigned i(0); i < test.captures.size(); ++i)
       CHECK(perft<perft_type::capture>(test.state, i + 1) == test.captures[i]);
 }
@@ -351,7 +358,7 @@ TEST_CASE("hash_values")
   for (unsigned p(BPAWN.id()); p <= WQUEEN.id(); ++p)
     for (square i(0); i < 64; ++i)
     {
-      const auto h(piece(p).hash(i));
+      const auto h(zobrist::piece[p][i]);
 
       CHECK(h != 0);
       CHECK(seen.find(h) == seen.end());
@@ -359,22 +366,22 @@ TEST_CASE("hash_values")
       seen.insert(h);
     }
 
-  CHECK(zobrist::side() != 0);
-  CHECK(seen.find(zobrist::side()) == seen.end());
-  seen.insert(zobrist::side());
+  CHECK(zobrist::side != 0);
+  CHECK(seen.find(zobrist::side) == seen.end());
+  seen.insert(zobrist::side);
 
   for (unsigned i(0); i < 8; ++i)
   {
-    CHECK(zobrist::ep(i) != 0);
-    CHECK(seen.find(zobrist::ep(i)) == seen.end());
-    seen.insert(zobrist::ep(i));
+    CHECK(zobrist::ep[i] != 0);
+    CHECK(seen.find(zobrist::ep[i]) == seen.end());
+    seen.insert(zobrist::ep[i]);
   }
 
   for (unsigned i(0); i < 16; ++i)
   {
-    CHECK(zobrist::castle(i) != 0);
-    CHECK(seen.find(zobrist::castle(i)) == seen.end());
-    seen.insert(zobrist::castle(i));
+    CHECK(zobrist::castle[i] != 0);
+    CHECK(seen.find(zobrist::castle[i]) == seen.end());
+    seen.insert(zobrist::castle[i]);
   }
 
   const state s(state::setup::start);
@@ -383,7 +390,7 @@ TEST_CASE("hash_values")
 
 TEST_CASE("hash_update")
 {
-  for (const auto &test : test_set)
+  for (const auto &test : test_set())
     CHECK(hash_tree(test.state, test.moves.size()));
 }
 

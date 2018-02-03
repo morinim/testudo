@@ -13,8 +13,7 @@
 
 #include <array>
 
-#include "random.h"
-#include "square.h"
+#include "piece.h"
 
 namespace testudo
 {
@@ -38,23 +37,10 @@ using hash_t = std::uint64_t;
 namespace zobrist
 {
 
-inline hash_t side() noexcept
-{
-  static const auto h(random::number<hash_t>());
-  return h;
-}
-
-inline hash_t ep(unsigned file) noexcept
-{
-  static const auto h(random::fill<std::array<hash_t, 8>>());
-  return h[file];
-}
-
-inline hash_t castle(unsigned c) noexcept
-{
-  static const auto h(random::fill<std::array<hash_t, 16>>());
-  return h[c];
-}
+extern std::array<std::array<hash_t, 64>, piece::sup_id> piece;
+extern const hash_t side;
+extern const std::array<hash_t, 8> ep;
+extern const std::array<hash_t, 16> castle;
 
 hash_t hash(const state &) noexcept;
 

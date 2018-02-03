@@ -9,6 +9,7 @@
  */
 
 #include "zobrist.h"
+#include "random.h"
 #include "state.h"
 
 namespace testudo
@@ -17,22 +18,31 @@ namespace testudo
 namespace zobrist
 {
 
+std::array<std::array<hash_t, 64>, piece::sup_id> piece(
+  random::fill2d<std::array<std::array<hash_t, 64>, piece::sup_id>>());
+
+const hash_t side(random::number<hash_t>());
+
+const std::array<hash_t, 8> ep(random::fill<std::array<hash_t, 8>>());
+
+const std::array<hash_t, 16> castle(random::fill<std::array<hash_t, 16>>());
+
 hash_t hash(const state &s) noexcept
 {
   hash_t ret(0);
 
   for (square i(0); i < 64; ++i)
   {
-    const piece p(s[i]);
+    const auto p(s[i]);
     if (p != EMPTY)
-      ret ^= p.hash(i);
+      ret ^= piece[p.id()][i];
   }
   if (!s.side())
-    ret ^= side();
+    ret ^= side;
   if (s.en_passant() != -1)
-    ret ^= ep(file(s.en_passant()));
+    ret ^= ep[file(s.en_passant())];
   if (s.castle())
-    ret ^= castle(s.castle());
+    ret ^= castle[s.castle()];
 
   return ret;
 }

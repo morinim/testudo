@@ -18,7 +18,6 @@
 #include "random.h"
 #include "score.h"
 #include "square.h"
-#include "zobrist.h"
 
 namespace testudo
 {
@@ -29,6 +28,7 @@ public:
   enum type {empty = 0, pawn, king, knight, bishop, rook, queen};
 
   using ID = std::uint8_t;
+  static constexpr ID sup_id = 14;
 
   explicit constexpr piece(ID i = 0) noexcept : id_(i) {}
   constexpr piece(testudo::color c, unsigned t) noexcept : piece(2 * t + c) {}
@@ -51,11 +51,7 @@ public:
 
   constexpr char letter() const noexcept;
 
-  hash_t hash(square) const noexcept;
-
 private:
-  static constexpr ID sup_id = 14;
-
   static constexpr std::initializer_list<int> offsets_[sup_id] =
   {
     {}, {},
@@ -130,14 +126,6 @@ inline constexpr char piece::letter() const noexcept
     'p', 'P', 'k', 'K', 'n', 'N', 'b', 'B', 'r', 'R', 'q', 'Q'
   };
   return letter_[id()];
-}
-
-inline hash_t piece::hash(square i) const noexcept
-{
-  static const auto hash_ =
-    random::fill2d<std::array<std::array<hash_t, 64>, piece::sup_id>>();
-
-  return hash_[id()][i];
 }
 
 inline constexpr bool operator==(piece lhs, piece rhs)

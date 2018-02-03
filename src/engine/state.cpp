@@ -429,7 +429,7 @@ void state::clear_square(square i)
   const piece p(board_[i]);
   assert(p != EMPTY);
 
-  hash_ ^= p.hash(i);
+  hash_ ^= zobrist::piece[p.id()][i];
   board_[i] = EMPTY;
 }
 
@@ -439,7 +439,7 @@ void state::fill_square(piece p, square i)
 {
   assert(board_[i].empty());
 
-  hash_ ^= p.hash(i);
+  hash_ ^= zobrist::piece[p.id()][i];
   board_[i] = p;
 
   if (p.type() == piece::king)
@@ -518,21 +518,21 @@ bool state::make_move(const move &m)
 
   // Update the castle...
   if (castle())
-    hash_ ^= zobrist::castle(castle());
+    hash_ ^= zobrist::castle[castle()];
   castle_ &= castle_mask[m.from] & castle_mask[m.to];
   if (castle())
-    hash_ ^= zobrist::castle(castle());
+    hash_ ^= zobrist::castle[castle()];
 
   // ...en passant...
   if (en_passant() != -1)
   {
-    hash_ ^= zobrist::ep(file(en_passant()));
+    hash_ ^= zobrist::ep[file(en_passant())];
     ep_ = -1;
   }
   if (m.flags & move::two_squares)
   {
     ep_ = m.to - pawn_fwd[side()];
-    hash_ ^= zobrist::ep(file(en_passant()));
+    hash_ ^= zobrist::ep[file(en_passant())];
   }
 
   // ..and fifty-move-draw variables.
@@ -562,7 +562,7 @@ bool state::make_move(const move &m)
   // Switch sides and test for legality (if we can capture the other King, it's
   // an illegal position and we need to take the move back).
   stm_ = !side();
-  hash_ ^= zobrist::side();
+  hash_ ^= zobrist::side;
 
   return !in_check(!side());
 }

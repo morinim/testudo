@@ -12,6 +12,7 @@
 #define      TESTUDO_STATE_H
 
 #include "move.h"
+#include "zobrist.h"
 
 namespace testudo
 {
