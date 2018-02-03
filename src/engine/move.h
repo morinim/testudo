@@ -17,9 +17,6 @@
 namespace testudo
 {
 
-/******************************************************************************
- * move struct
- *****************************************************************************/
 struct move
 {
   enum {capture = 1, castle = 2, en_passant = 4, two_squares = 8,
@@ -36,7 +33,7 @@ struct move
 
   // A sentinel value (empty move, end of iteration...).
   static constexpr move sentry() noexcept { return move(-1, -1, 0); }
-  constexpr bool is_sentry() const noexcept { return from < 0; }
+  constexpr bool is_sentry() const noexcept { return !valid(from); }
 
   square    from;
   square      to;

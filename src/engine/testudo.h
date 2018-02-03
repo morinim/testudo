@@ -11,6 +11,7 @@
 #if !defined(TESTUDO_H)
 #define      TESTUDO_H
 
+#include "game.h"
 #include "search.h"
 
 namespace testudo
