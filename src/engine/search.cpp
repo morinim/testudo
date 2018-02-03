@@ -241,15 +241,22 @@ std::vector<move> search::extract_pv() const
 
 move search::operator()(bool verbose)
 {
-  search_time_.restart();
-  tt_->inc_age();
-  stats.reset();
+  switch (root_state_.mate_or_draw())
+  {
+  case state::kind::mated:
+  case state::kind::draw_stalemate:
+    return move::sentry();
 
-  score alpha(-INF), beta(+INF);
+  default:
+    search_time_.restart();
+    tt_->inc_age();
+    stats.reset();
+  }
 
   move best_move(move::sentry());
 
-  stats.depth = 0;
+  score alpha(-INF), beta(+INF);
+  stats.depth = 1;
   for (unsigned max(max_depth ? max_depth : 1000);
        stats.depth <= max;
        ++stats.depth)
@@ -271,7 +278,7 @@ move search::operator()(bool verbose)
 
     const auto pv(extract_pv());
     if (!pv.empty())
-      best_move = pv[0];
+      best_move = pv.front();
 
     if (verbose)
     {
@@ -284,7 +291,8 @@ move search::operator()(bool verbose)
       std::cout << std::endl;
     }
 
-    if (is_mate(x))
+    if (is_mate(x)
+        || (root_state_.moves().size() == 1 && stats.depth == 5))
       break;
   }
 
