@@ -32,7 +32,7 @@ const std::vector<fen_test_case> &test_set()
   static const std::vector<fen_test_case> ts(
   {
     {
-      state("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
+      state("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -"),
       {20, 400, 8902, 197281, /*4865609, 119060324, 3195901860, 84998978956*/},
       {0, 0, 34, 1576, /* 82719, 2812008 */}
     },
@@ -49,7 +49,7 @@ const std::vector<fen_test_case> &test_set()
     },
     {
       state(  // by Steven Edwards
-        "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"),
+        "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -"),
       {6, 264, 9467, 422333, /* 15833292, 706045033 */},
       {0, 87, 1021, 131393, /* 2046173, 210369132 */}
     },
@@ -67,7 +67,7 @@ const std::vector<fen_test_case> &test_set()
     },
     {
       state(  // Position with 218 legal moves (!) reported by Scott Gasch
-        "3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - - 0 1"),
+        "3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - -"),
       {218},
       {}
     }

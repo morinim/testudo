@@ -237,6 +237,9 @@ state::state(const std::string &a_fen) : state(setup::empty)
   if (!(ss >> s))
     return;
   fifty_ = std::stoul(s);
+
+  // Ignore full move counter.
+  ss >> s;
 }
 
 
