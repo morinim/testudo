@@ -401,7 +401,7 @@ TEST_CASE("search")
   cache tt;
   search s(p, &tt);
 
-  const move m(s(true));
+  const move m(s.run(true));
   CHECK(!m);
 }
 
@@ -420,7 +420,7 @@ TEST_CASE("search")
 
   s.max_time = std::chrono::milliseconds(3000000);
 
-  const move m(s(true));
+  const move m(s.run(true));
   std::cout << m << std::endl;
 }
 */
@@ -439,9 +439,9 @@ TEST_CASE("transposition_table")
   cache tt(21);
   search s(fine70, &tt);
 
-  s.max_time = std::chrono::milliseconds(30000);
+  s.max_time = std::chrono::milliseconds(300000);
 
-  const move m(s(true));
+  const move m(s.run(true));
   CHECK(m == move(A1, B1, 0));
 }
 

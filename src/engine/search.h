@@ -30,7 +30,7 @@ public:
   score alphabeta(const state &, score, score, unsigned, int);
   int quiesce(const state &, score, score);
 
-  move operator()(bool);
+  move run(bool);
 
   struct statistics
   {
@@ -49,6 +49,7 @@ public:
 private:
   static constexpr int PLY = 16;
 
+  score aspiration_search(score *, score *, int);
   int delta_draft(bool, unsigned, const move &);
   std::vector<move> extract_pv() const;
   std::vector<move> sorted_captures(const state &);

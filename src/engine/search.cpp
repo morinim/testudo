@@ -239,7 +239,42 @@ std::vector<move> search::extract_pv() const
   return pv;
 }
 
-move search::operator()(bool verbose)
+// Aspiration windows are a way to reduce the search space in an alpha-beta
+// search.
+// The technique is to use a guess of the expected value (usually from the last
+// iteration in iterative deepening) and use a window around this as the
+// alpha-beta bounds. Because the window is narrower, more beta cutoffs are
+// achieved and the search takes a shorter time.
+// The drawback is that if the true score is outside this window, then a costly
+// re-search must be made.
+score search::aspiration_search(score *alpha, score *beta, int draft)
+{
+  auto x(alphabeta(root_state_, *alpha, *beta, 0, draft));
+
+  if (search_stopped_)
+    return 0;
+
+  if (x <= *alpha || x >= *beta)
+    x = alphabeta(root_state_, -INF, +INF, 0, draft);
+
+  if (search_stopped_)
+    return 0;
+
+  *alpha = x - 50;
+  *beta  = x + 50;
+
+  return x;
+}
+
+// Calls `aspiration_search` with increasing depth until allocated resources
+// are exhausted.
+// In case of an unfinished search (`search_stopped`), the program always has
+// the option to fall back to the move selected in the last iteration of the
+// search.
+// This is called "iterative deepening". Iterative deepening, using a
+// transposition table, embed the depth-first algorithms like alpha-beta into a
+// framework with best-first characteristics.
+move search::run(bool verbose)
 {
   switch (root_state_.mate_or_draw())
   {
@@ -261,20 +296,10 @@ move search::operator()(bool verbose)
        stats.depth <= max;
        ++stats.depth)
   {
-    auto x(alphabeta(root_state_, alpha, beta, 0, stats.depth * PLY));
+    const auto x(aspiration_search(&alpha, &beta, stats.depth * PLY));
 
     if (search_stopped_)
       break;
-
-    if (x <= alpha || x >= beta)
-    {
-      alpha = -INF;
-      beta  = +INF;
-      continue;
-    }
-
-    alpha = x - 50;
-    beta  = x + 50;
 
     const auto pv(extract_pv());
     if (!pv.empty())

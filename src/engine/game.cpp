@@ -54,7 +54,7 @@ move game::think(bool verbose)
   s.max_depth = max_depth_;
   s.max_time = time_info_.time_for_next_move();
 
-  return s(verbose);
+  return s.run(verbose);
 }
 
 void game::time_info::level(unsigned moves, std::chrono::milliseconds time)
