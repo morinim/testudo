@@ -11,6 +11,8 @@
 #if !defined(TESTUDO_SEARCH_H)
 #define      TESTUDO_SEARCH_H
 
+#include <cassert>
+
 #include "state.h"
 #include "timer.h"
 
@@ -19,16 +21,10 @@ namespace testudo
 
 class cache;
 
-/******************************************************************************
- * search class
- *****************************************************************************/
 class search
 {
 public:
-  explicit search(const state &, cache *);
-
-  score alphabeta(const state &, score, score, unsigned, int);
-  int quiesce(const state &, score, score);
+  search(const std::vector<state> &, cache *);
 
   move run(bool);
 
@@ -49,13 +45,27 @@ public:
 private:
   static constexpr int PLY = 16;
 
+  score alphabeta(const state &, score, score, unsigned, int);
   score aspiration_search(score *, score *, int);
-  int delta_draft(bool, unsigned, const move &);
+  int delta_draft(bool, unsigned, const move &) const;
   std::vector<move> extract_pv() const;
+  int quiesce(const state &, score, score);
   std::vector<move> sorted_captures(const state &);
   std::vector<move> sorted_moves(const state &);
 
   state root_state_;
+
+  struct search_path_info
+  {
+    explicit search_path_info(const std::vector<state> &);
+
+    bool repetitions() const;
+
+    void push(const state &);
+    void pop();
+
+    std::vector<hash_t> states;  // used for repetition detection
+  } search_path_info_;
 
   cache *tt_;
 
@@ -63,10 +73,15 @@ private:
   bool search_stopped_;
 };  // class search
 
-inline search::search(const state &root, cache *tt)
-  : stats(), max_time(0), max_depth(0), root_state_(root), tt_(tt),
-    search_time_(), search_stopped_(false)
+// `states` is the sequence of states reached until now. It could be a partial
+// list (e.g. for FEN positions) but `states.back()` must contain the current
+// state.
+inline search::search(const std::vector<state> &states, cache *tt)
+  : stats(), max_time(0), max_depth(0), root_state_(states.back()),
+    search_path_info_(states), tt_(tt), search_time_(), search_stopped_(false)
 {
+  assert(!states.empty());
+  assert(tt);
 }
 
 }  // namespace testudo

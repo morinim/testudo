@@ -11,6 +11,7 @@
 #if !defined(TESTUDO_GAME_H)
 #define      TESTUDO_GAME_H
 
+#include <cassert>
 #include <chrono>
 
 #include "state.h"
@@ -22,12 +23,12 @@ namespace testudo
 class game
 {
 public:
-  game() : current_state(), show_search_info(true), ics(false), tt_(),
-           previous_states_(), computer_side_(-1), max_depth_(0), time_info_()
+  game() : show_search_info(true), ics(false),
+           states_({state(state::setup::start)}), tt_(), computer_side_(-1),
+           max_depth_(0), time_info_()
   {}
 
   bool make_move(const move &);
-
   bool take_back(unsigned = 1);
 
   void max_depth(unsigned d) { max_depth_ = d; }
@@ -45,14 +46,18 @@ public:
 
   move think(bool);
 
-  state current_state;
+  const state &current_state() const
+  { assert(!states_.empty());  return states_.back(); }
+
+  void set_board(const std::string &s) { states_ = {state(s)}; }
+
   bool show_search_info;
   bool ics;
 
 private:
   cache tt_;
 
-  std::vector<state> previous_states_;
+  std::vector<state> states_;
 
   int computer_side_;                   // -1, BLACK, WHITE
   unsigned max_depth_;                  // Maximum search depth

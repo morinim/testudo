@@ -16,25 +16,25 @@ namespace testudo
 
 bool game::make_move(const move &m)
 {
-  previous_states_.push_back(current_state);
+  auto current(current_state());
 
-  if (current_state.make_move(m))
+  if (current.make_move(m))
+  {
+    states_.push_back(current);
     return true;
+  }
 
-  take_back();
   return false;
 }
 
 bool game::take_back(unsigned n)
 {
-  if (previous_states_.size() < n)
+  if (states_.size() <= n)  // at least a one-state history
     return false;
 
-  while (n-- > 1)
-    previous_states_.pop_back();
+  while (n--)
+    states_.pop_back();
 
-  current_state = previous_states_.back();
-  previous_states_.pop_back();
   return true;
 }
 
@@ -49,7 +49,7 @@ void game::max_time(std::chrono::milliseconds t)
 // Returns the best move found (if available).
 move game::think(bool verbose)
 {
-  search s(current_state, &tt_);
+  search s(states_, &tt_);
 
   s.max_depth = max_depth_;
   s.max_time = time_info_.time_for_next_move();

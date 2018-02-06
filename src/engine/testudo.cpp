@@ -88,7 +88,7 @@ void loop()
   {
     std::cout << std::flush;
 
-    if (g.current_state.side() == g.computer_side())
+    if (g.current_state().side() == g.computer_side())
     {
       const auto m(g.think(g.show_search_info));
       if (!m)
@@ -96,7 +96,7 @@ void loop()
       else
       {
         g.make_move(m);
-        print_move_or_result(g.current_state, m);
+        print_move_or_result(g.current_state(), m);
       }
       continue;
     }
@@ -119,7 +119,7 @@ void loop()
     }
     if (cmd == "go")
     {
-      g.computer_side(g.current_state.side());
+      g.computer_side(g.current_state().side());
       continue;
     }
     if (cmd == "hint")
@@ -177,7 +177,7 @@ void loop()
     }
     if (cmd == "playother")
     {
-      g.computer_side(!g.current_state.side());
+      g.computer_side(!g.current_state().side());
       continue;
     }
     if (cmd == "post")
@@ -200,7 +200,7 @@ void loop()
     if (cmd == "setboard")
     {
       std::string fen;  is >> fen;
-      g.current_state = state(fen);
+      g.set_board(fen);
       continue;
     }
     if (cmd == "sd")
@@ -227,7 +227,7 @@ void loop()
       continue;
     }
 
-    const move m(g.current_state.parse_move(cmd));
+    const move m(g.current_state().parse_move(cmd));
     if (!m)
       std::cout << "Error (unknown command): " << cmd << std::endl;
     else

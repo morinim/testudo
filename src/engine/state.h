@@ -50,7 +50,7 @@ public:
   bool in_check(color) const;
   bool in_check() const { return in_check(side()); }
 
-  kind mate_or_draw() const;
+  kind mate_or_draw(const std::vector<hash_t> * = nullptr) const;
 
   piece operator[](square s) const noexcept { return board_[s]; }
 
@@ -88,8 +88,6 @@ private:
 
   square king_[2];
   hash_t hash_;
-
-  std::vector<hash_t> previous_states_;  // used for repetition detection
 };
 
 inline state state::after_move(const move &m) const

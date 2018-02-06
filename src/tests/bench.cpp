@@ -13,7 +13,7 @@
 #include "engine/testudo.h"
 
 // Runs a simple six-position benchmark to gauge performance. The test
-// positons are hard-coded and the benchmark is calculated much like it would
+// positions are hard-coded and the benchmark is calculated much like it would
 // with an external "test" file. The test is a mix of opening, middlegame and
 // endgame positions, with both tactical and positional aspects. This test is a
 // speed measure only; the actual solutions to the positions are ignored.
@@ -62,7 +62,7 @@ std::chrono::seconds bench()
     }
   });
 
-  std::cout << "Running benchmark...\n";
+  std::cout << "Running benchmark...\n\n";
 
   seconds total_time(0);
   std::uintmax_t snodes(0), qnodes(0);
@@ -73,7 +73,7 @@ std::chrono::seconds bench()
     cache tt(20);
 
     timer t;
-    search s(p.state, &tt);
+    search s({p.state}, &tt);
 
     s.max_time  = milliseconds(0);
     s.max_depth = p.depth;
@@ -87,8 +87,9 @@ std::chrono::seconds bench()
 
   std::cout << "\nTotal time: " << total_time.count() << "s\n"
             << "Nodes: " << snodes + qnodes
-            << "(snodes: " << snodes
-            << ", qnodes: " << qnodes << ")\n";
+            << " (search: " << snodes
+            << ", quiescence: " << qnodes << ")\n"
+            << "NPS: " << (snodes + qnodes) / total_time.count() << '\n';
 
   return total_time;
 }

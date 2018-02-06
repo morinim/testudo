@@ -121,7 +121,7 @@ std::ostream &operator<<(std::ostream &o, const state &s)
 state::state(setup t) noexcept
   : stm_(WHITE),
     castle_(white_kingside|white_queenside|black_kingside|black_queenside),
-    ep_(-1), fifty_(0), king_(), hash_(), previous_states_()
+    ep_(-1), fifty_(0), king_(), hash_()
 {
   static const std::array<piece, 64> init_piece(
   {{
@@ -474,8 +474,6 @@ bool state::make_move(const move &m)
 {
   assert (!m.is_sentry());
 
-  previous_states_.push_back(hash());
-
   const color xside(!side());
 
   // Test to see if a castle move is legal and move the Rook (the King is
@@ -573,23 +571,7 @@ bool state::make_move(const move &m)
   return !in_check(!side());
 }
 
-// Returns the number of times the current position has been repeated (compares
-// the current hash value to already seen values).
-unsigned state::repetitions() const noexcept
-{
-  const std::size_t start(previous_states_.size() >= fifty()
-                          ? previous_states_.size() - fifty()
-                          : 0);
-
-  unsigned r(0);
-  for (auto i(start); i < previous_states_.size(); ++i)
-    if (previous_states_[i] == hash())
-      ++r;
-
-  return r;
-}
-
-state::kind state::mate_or_draw() const
+state::kind state::mate_or_draw(const std::vector<hash_t> *history) const
 {
   if (moves().empty())
     return in_check() ? kind::mated : kind::draw_stalemate;
@@ -597,8 +579,18 @@ state::kind state::mate_or_draw() const
   if (fifty() >= 100)
     return kind::draw_fifty;
 
-  if (repetitions() >= 2)
-    return kind::draw_repetition;
+  if (history)
+  {
+    assert(!history->empty());
+    assert(history->back() == hash());
+
+    unsigned rep(0);
+    for (std::size_t i(0); i < history->size(); ++i)
+      if ((*history)[i] == history->back())
+        ++i;
+    if (rep >= 2)
+      return kind::draw_repetition;
+  }
 
   return kind::standard;
 }

@@ -9,14 +9,56 @@
  */
 
 #include <algorithm>
-#include <cassert>
+#include <memory>
 
 #include "search.h"
 #include "cache.h"
 #include "eval.h"
+#include "util.h"
 
 namespace testudo
 {
+
+// Extraxt from the list of past known states (`ss`) a subset of hash values
+// used for repetition detection.
+search::search_path_info::search_path_info(const std::vector<state> &ss)
+{
+  assert(!states.empty());
+
+  const state current(ss.back());
+
+  const std::size_t start(ss.size() >= current.fifty()
+                          ? ss.size() - current.fifty()
+                          : 0);
+
+  for (auto i(start); i < ss.size(); ++i)
+    states.push_back(ss[i].hash());
+}
+
+// Returns `true` if the current position (`states_.back()`) has been
+// repeated (compares the current hash value to already seen values).
+bool search::search_path_info::repetitions() const
+{
+  assert(!states.empty());
+
+  const std::size_t current(states.size() - 1);
+
+  std::size_t i(current & 1);
+  while (states[i] != states[current])  // current hash is used as a sentinel
+    i += 2;
+
+  return i != current;
+}
+
+void search::search_path_info::push(const state &current)
+{
+  states.push_back(current.hash());
+}
+
+void search::search_path_info::pop()
+{
+  states.pop_back();
+}
 
 std::vector<move> search::sorted_captures(const state &s)
 {
@@ -101,7 +143,7 @@ std::vector<move> search::sorted_moves(const state &s)
   return moves;
 }
 
-int search::delta_draft(bool in_check, unsigned n_moves, const move &m)
+int search::delta_draft(bool in_check, unsigned n_moves, const move &m) const
 {
   int delta(-PLY);
 
@@ -131,17 +173,18 @@ score search::alphabeta(const state &s, score alpha, score beta,
 {
   assert(alpha < beta);
 
-  ++stats.snodes;
-
   // Checks to see if we have searched enough nodes that it's time to peek at
   // how much time has been used / check for operator keyboard input.
-  if (stats.snodes % 1000 == 0 || search_stopped_)
+  if (search_stopped_ || ++stats.snodes % 1000 == 0)
   {
     search_stopped_ = search_time_.elapsed(max_time);
 
     if (search_stopped_)
       return 0;
   }
+
+  search_path_info_.push(s);
+  auto guard = finally([&]{ search_path_info_.pop(); });
 
   // Check to see if this position has been searched before. If so, we may get
   // a real score, produce a cutoff or get nothing more than a good move to try
@@ -157,10 +200,9 @@ score search::alphabeta(const state &s, score alpha, score beta,
   // - `score_type::fail_high` which means that when we encountered this
   //   position before, we searched one branch (probably) which promptly
   //   refuted the move at the previous ply.
-  const auto hash(s.hash());
   if (ply)
   {
-    const auto entry(tt_->find(hash));
+    const auto entry(tt_->find(s.hash()));
     if (entry && entry->draft >= draft)
       switch (entry->type)
       {
@@ -186,7 +228,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
   if (moves.empty())
     return in_check ? -MATE + ply : 0;
 
-  if (ply && (s.repetitions() || s.fifty() >= 100))
+  if (ply && (search_path_info_.repetitions() || s.fifty() >= 100))
     return 0;
 
   auto best_move(move::sentry());
@@ -203,7 +245,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
       if (x >= beta)
       {
         if (!search_stopped_)
-          tt_->insert(hash, m, draft, score_type::fail_high, beta);
+          tt_->insert(s.hash(), m, draft, score_type::fail_high, beta);
 
         return beta;
       }
@@ -214,7 +256,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
   }
 
   if (!search_stopped_)
-    tt_->insert(hash, best_move, draft,
+    tt_->insert(s.hash(), best_move, draft,
                 !best_move ? score_type::fail_low : score_type::exact, alpha);
 
   return alpha;
@@ -229,7 +271,7 @@ std::vector<move> search::extract_pv() const
   auto s(root_state_);
   for (auto entry(tt_->find(s.hash()));
        entry && !entry->best_move.is_sentry()
-       && (s.repetitions() <= 2 || pv.empty())
+       && (pv.size() <= 2 * stats.depth || pv.empty())
        && s.make_move(entry->best_move);)
   {
     pv.push_back(entry->best_move);
@@ -276,7 +318,7 @@ score search::aspiration_search(score *alpha, score *beta, int draft)
 // framework with best-first characteristics.
 move search::run(bool verbose)
 {
-  switch (root_state_.mate_or_draw())
+  switch (root_state_.mate_or_draw(&search_path_info_.states))
   {
   case state::kind::mated:
   case state::kind::draw_stalemate:

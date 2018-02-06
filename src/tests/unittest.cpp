@@ -399,7 +399,7 @@ TEST_CASE("search")
   const state p("8/8/8/5K1k/8/8/8/7R b - -");
 
   cache tt;
-  search s(p, &tt);
+  search s({p}, &tt);
 
   const move m(s.run(true));
   CHECK(!m);
@@ -416,7 +416,7 @@ TEST_CASE("search")
     "8/8/8/8/k7/8/5KP1/1Q6 w - - 1 63");
 
   cache tt;
-  search s(p1, &tt);
+  search s({p1}, &tt);
 
   s.max_time = std::chrono::milliseconds(3000000);
 
@@ -437,7 +437,7 @@ TEST_CASE("transposition_table")
   const state fine70("8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -");
 
   cache tt(21);
-  search s(fine70, &tt);
+  search s({fine70}, &tt);
 
   s.max_time = std::chrono::milliseconds(300000);
 
