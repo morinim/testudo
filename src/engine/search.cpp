@@ -159,6 +159,68 @@ int search::delta_draft(bool in_check, unsigned n_moves, const move &m) const
   return std::min(0, delta);
 }
 
+// A slightly modified version of alphabeta (not stricly necessary but helps
+// to avoid a lot of `if`):
+// - the order of the moves is improved when a best move is found. This is
+//   possible since the root moves are "permanent" (they're kept inside the
+//   `stat` structure and are available even when the search is finished). THIS
+//   IS AN IMPORTANT DIFFERENCE;
+// - the function assumes that the position isn't a stalemate / immediate mate;
+// - the function ignores draw by repetition / 50 moves rule (we want a move).
+score search::alphabeta_root(const state &s, score alpha, score beta, int draft)
+{
+  assert(alpha < beta);
+
+  ++stats.snodes;
+
+  search_path_info_.push(s);
+  auto guard = finally([&]{ search_path_info_.pop(); });
+
+  auto &moves(stats.moves_at_root);
+  if (moves.empty())
+    moves = sorted_moves(root_state_);
+  assert(!moves.empty());
+
+  const bool in_check(s.in_check());
+
+  auto best_move(move::sentry());
+  for (std::size_t i(0); i < moves.size(); ++i)
+  {
+    const auto new_draft(draft + delta_draft(in_check, moves.size(), moves[i]));
+
+    const auto x(draft > PLY ? -alphabeta(s.after_move(moves[i]),
+                                          -beta, -alpha, 1, new_draft)
+                             : -quiesce(s.after_move(moves[i]),
+                                        -beta, -alpha));
+
+    if (x > alpha)
+    {
+      best_move = moves[i];
+
+      // Moves at the root node are very important and they're kept in the best
+      // available order (given the search history).
+      std::copy_backward(&moves[0], &moves[i], &moves[i+1]);
+      moves[0] = best_move;
+
+      if (x >= beta)
+      {
+        if (!search_stopped_)
+          tt_->insert(s.hash(), best_move, draft, score_type::fail_high, beta);
+
+        return beta;
+      }
+
+      alpha = x;
+    }
+  }
+
+  if (!search_stopped_)
+    tt_->insert(s.hash(), best_move, draft,
+                !best_move ? score_type::fail_low : score_type::exact, alpha);
+
+  return alpha;
+}
+
 // Recursively implements negamax alphabeta until draft is exhausted, at which
 // time it calls quiesce().
 // The `ply` index measures the distance of the current node from the root
@@ -200,26 +262,23 @@ score search::alphabeta(const state &s, score alpha, score beta,
   // - `score_type::fail_high` which means that when we encountered this
   //   position before, we searched one branch (probably) which promptly
   //   refuted the move at the previous ply.
-  if (ply)
-  {
-    const auto entry(tt_->find(s.hash()));
-    if (entry && entry->draft >= draft)
-      switch (entry->type)
-      {
-      case score_type::exact:
-        return entry->value;
-      case score_type::fail_low:
-        if (entry->value <= alpha)
-          return alpha;
-        break;
-      case score_type::fail_high:
-        if (entry->value >= beta)
-          return beta;
-        break;
-      default:  // score_type::ignore
-        ;
-      }
-  }
+  const auto entry(tt_->find(s.hash()));
+  if (entry && entry->draft >= draft)
+    switch (entry->type)
+    {
+    case score_type::exact:
+      return entry->value;
+    case score_type::fail_low:
+      if (entry->value <= alpha)
+        return alpha;
+      break;
+    case score_type::fail_high:
+      if (entry->value >= beta)
+        return beta;
+      break;
+    default:  // score_type::ignore
+      ;
+    }
 
   const auto moves(sorted_moves(s));
 
@@ -228,7 +287,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
   if (moves.empty())
     return in_check ? -MATE + ply : 0;
 
-  if (ply && (search_path_info_.repetitions() || s.fifty() >= 100))
+  if (search_path_info_.repetitions() || s.fifty() >= 100)
     return 0;
 
   auto best_move(move::sentry());
@@ -242,15 +301,16 @@ score search::alphabeta(const state &s, score alpha, score beta,
 
     if (x > alpha)
     {
+      best_move = m;
+
       if (x >= beta)
       {
         if (!search_stopped_)
-          tt_->insert(s.hash(), m, draft, score_type::fail_high, beta);
+          tt_->insert(s.hash(), best_move, draft, score_type::fail_high, beta);
 
         return beta;
       }
 
-      best_move = m;
       alpha = x;
     }
   }
@@ -291,13 +351,13 @@ std::vector<move> search::extract_pv() const
 // re-search must be made.
 score search::aspiration_search(score *alpha, score *beta, int draft)
 {
-  auto x(alphabeta(root_state_, *alpha, *beta, 0, draft));
+  auto x(alphabeta_root(root_state_, *alpha, *beta, draft));
 
   if (search_stopped_)
     return 0;
 
   if (x <= *alpha || x >= *beta)
-    x = alphabeta(root_state_, -INF, +INF, 0, draft);
+    x = alphabeta_root(root_state_, -INF, +INF, draft);
 
   if (search_stopped_)
     return 0;
@@ -343,9 +403,9 @@ move search::run(bool verbose)
     if (search_stopped_)
       break;
 
+    best_move = stats.moves_at_root.front();
+    assert(extract_pv().front() == best_move);
     const auto pv(extract_pv());
-    if (!pv.empty())
-      best_move = pv.front();
 
     if (verbose)
     {

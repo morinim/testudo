@@ -435,6 +435,7 @@ TEST_CASE("transposition_table")
   // appropriate (winning) score in less than one second. However, it's not
   // recommended to tune replacement schemes purely based on this position.
   const state fine70("8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -");
+  //const state fine70("4k3/8/8/8/8/8/4P3/4K3 w - -");
 
   cache tt(21);
   search s({fine70}, &tt);
