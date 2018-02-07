@@ -12,6 +12,7 @@
 #define      TESTUDO_STATE_H
 
 #include "move.h"
+#include "movelist.h"
 #include "zobrist.h"
 
 namespace testudo
@@ -33,9 +34,9 @@ public:
   explicit state(const std::string &);
 
   // Generates the set of legal moves.
-  std::vector<move> moves() const;
+  movelist moves() const;
   // Generates the set of legal captures.
-  std::vector<move> captures() const;
+  movelist captures() const;
 
   // Makes a move.
   // If the move is illegal, undoes whatever it did and returns the initial
@@ -69,12 +70,12 @@ public:
   unsigned repetitions() const noexcept;
 
 private:
-  void add_m(std::vector<move> &, square from, square to,
+  void add_m(movelist &, square from, square to,
              decltype(move::flags) flags) const;
-  void add_pawn_m(std::vector<move> &, square from, square to,
+  void add_pawn_m(movelist &, square from, square to,
                   decltype(move::flags) flags) const;
-  void add_pawn_captures(std::vector<move> &, square) const;
-  void add_en_passant(std::vector<move> &) const;
+  void add_pawn_captures(movelist &, square) const;
+  void add_en_passant(movelist &) const;
   void clear_square(square);
   void fill_square(piece, square);
 

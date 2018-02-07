@@ -60,7 +60,7 @@ void search::search_path_info::pop()
   states.pop_back();
 }
 
-std::vector<move> search::sorted_captures(const state &s)
+movelist search::sorted_captures(const state &s)
 {
   const auto move_score(
     [&](const move &m)
@@ -110,7 +110,7 @@ score search::quiesce(const state &s, score alpha, score beta)
   return alpha;
 }
 
-std::vector<move> search::sorted_moves(const state &s)
+movelist search::sorted_moves(const state &s)
 {
   const auto entry(tt_->find(s.hash()));
   const move best_move(entry ? entry->best_move : move::sentry());
@@ -324,9 +324,9 @@ score search::alphabeta(const state &s, score alpha, score beta,
 
 // Extract the PV from the transposition table.
 // At least one should always be returned (even in case of immediate draw).
-std::vector<move> search::extract_pv() const
+movelist search::extract_pv() const
 {
-  std::vector<move> pv;
+  movelist pv;
 
   auto s(root_state_);
   for (auto entry(tt_->find(s.hash()));

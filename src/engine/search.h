@@ -31,13 +31,12 @@ public:
   struct statistics
   {
     statistics() : moves_at_root(), snodes(0), qnodes(0), depth(0) {}
-
     void reset() { *this = statistics(); }
 
-    std::vector<move> moves_at_root;
-    std::uintmax_t           snodes;  // search nodes
-    std::uintmax_t           qnodes;  // quiescence search nodes
-    unsigned                  depth;  // depth reached
+    movelist       moves_at_root;
+    std::uintmax_t        snodes;  // search nodes
+    std::uintmax_t        qnodes;  // quiescence search nodes
+    unsigned               depth;  // depth reached
   } stats;
 
   std::chrono::milliseconds max_time;
@@ -51,10 +50,10 @@ private:
   score alphabeta_root(const state &, score, score, int);
   score aspiration_search(score *, score *, int);
   int delta_draft(bool, unsigned, const move &) const;
-  std::vector<move> extract_pv() const;
+  movelist extract_pv() const;
   int quiesce(const state &, score, score);
-  std::vector<move> sorted_captures(const state &);
-  std::vector<move> sorted_moves(const state &);
+  movelist sorted_captures(const state &);
+  movelist sorted_moves(const state &);
 
   state root_state_;
 

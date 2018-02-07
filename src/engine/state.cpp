@@ -243,7 +243,7 @@ state::state(const std::string &a_fen) : state(setup::empty)
 }
 
 
-void state::add_m(std::vector<move> &moves, square from, square to,
+void state::add_m(movelist &moves, square from, square to,
                   decltype(move::flags) flags) const
 {
   move m(from, to, flags);
@@ -253,7 +253,7 @@ void state::add_m(std::vector<move> &moves, square from, square to,
     moves.push_back(m);
 }
 
-void state::add_pawn_m(std::vector<move> &moves, square from, square to,
+void state::add_pawn_m(movelist &moves, square from, square to,
                        decltype(move::flags) flags) const
 {
   switch (rank(to))
@@ -268,7 +268,7 @@ void state::add_pawn_m(std::vector<move> &moves, square from, square to,
   }
 }
 
-void state::add_pawn_captures(std::vector<move> &moves, square i) const
+void state::add_pawn_captures(movelist &moves, square i) const
 {
   for (auto delta : pawn_capture[side()])
   {
@@ -279,7 +279,7 @@ void state::add_pawn_captures(std::vector<move> &moves, square i) const
   }
 }
 
-void state::add_en_passant(std::vector<move> &moves) const
+void state::add_en_passant(movelist &moves) const
 {
   if (valid(ep_))
     for (auto delta : pawn_capture[side()])
@@ -292,9 +292,12 @@ void state::add_en_passant(std::vector<move> &moves) const
     }
 }
 
-std::vector<move> state::moves() const
+movelist state::moves() const
 {
-  std::vector<move> ret;
+  // The maximum number of moves per positions seems to be 218 but you can
+  // hardly get more than 70 moves in a standard game.
+  movelist ret;
+  ret.reserve(80);
 
   const auto add([&](square from, square to, decltype(move::flags) flags)
                  {
@@ -371,9 +374,10 @@ std::vector<move> state::moves() const
 
 // Basically a copy of state::moves(), just modified to generate only captures
 // and promotions.
-std::vector<move> state::captures() const
+movelist state::captures() const
 {
-  std::vector<move> ret;
+  movelist ret;
+  ret.reserve(40);
 
   // Just a shortcut for the add_m method.
   const auto add([&](square from, square to, decltype(move::flags) flags)

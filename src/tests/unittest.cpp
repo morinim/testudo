@@ -81,7 +81,7 @@ enum class perft_type {all, capture};
 template<perft_type T>
 std::uintmax_t perft(const state &s, unsigned depth, unsigned print = 10000)
 {
-  std::vector<move> moves;
+  movelist moves;
 
   if (depth == 1)
   {
