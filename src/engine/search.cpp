@@ -237,7 +237,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
 
   // Checks to see if we have searched enough nodes that it's time to peek at
   // how much time has been used / check for operator keyboard input.
-  if (search_stopped_ || ++stats.snodes % 1000 == 0)
+  if (search_stopped_ || ++stats.snodes % nodes_between_checks == 0)
   {
     search_stopped_ = search_time_.elapsed(max_time);
 

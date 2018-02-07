@@ -45,6 +45,7 @@ public:
 
 private:
   static constexpr int PLY = 16;
+  static constexpr std::uintmax_t nodes_between_checks = 2048;
 
   score alphabeta(const state &, score, score, unsigned, int);
   score alphabeta_root(const state &, score, score, int);
