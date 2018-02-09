@@ -245,6 +245,8 @@ void loop()
 #if !defined(TESTUDO_CONFIG_TEST)
 int main()
 {
+  testudo::log::setup_stream("testudo");
+
   testudo::CECP::loop();
 }
 #endif

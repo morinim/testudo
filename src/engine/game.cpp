@@ -9,6 +9,7 @@
  */
 
 #include "game.h"
+#include "log.h"
 #include "search.h"
 
 namespace testudo
@@ -61,9 +62,9 @@ void game::time_info::level(unsigned moves, std::chrono::milliseconds time)
 {
   using namespace std::chrono_literals;
 
-  std::cout << "# Setting time control to " << moves << ' '
-            << std::chrono::duration_cast<std::chrono::seconds>(time).count()
-            << 's' << std::endl;
+  testudoINFO << "Setting time control to " << moves << ' '
+              << std::chrono::duration_cast<std::chrono::seconds>(time).count()
+              << 's';
 
   moves_per_tc = moves;
   tc           =  time;
@@ -74,8 +75,8 @@ void game::time_info::level(unsigned moves, std::chrono::milliseconds time)
 
 void game::time_info::time(std::chrono::milliseconds t)
 {
-  std::cout << "# Updating time to next time control from "
-            << time_left.count() << "ms to " << t.count() << "ms" << std::endl;
+  testudoINFO << "Updating time to next time control from "
+              << time_left.count() << "ms to " << t.count() << "ms";
 
   time_left = t;
 }
@@ -121,7 +122,7 @@ std::chrono::milliseconds game::time_info::time_for_next_move()
   if (max_time != 0ms)
     t = std::min(max_time, t);
 
-  std::cout << "# Time for next move: " << t.count() << "ms" << std::endl;
+  testudoINFO << "Time for next move: " << t.count() << "ms";
   return t;
 }
 

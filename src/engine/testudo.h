@@ -12,6 +12,7 @@
 #define      TESTUDO_H
 
 #include "game.h"
+#include "log.h"
 #include "search.h"
 
 namespace testudo
