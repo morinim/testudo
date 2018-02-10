@@ -43,7 +43,8 @@ const cache::info *cache::find(hash_t h) const noexcept
 // store a value, and a flag that indicates what the value means.
 // If you store, let's say, a 16 in the `value` field, and `exact` in the
 // `type` field, this means that the value of the node was exactly 16. If you
-// store `fail_low` in the `type` field, the value of the node was at most 16.  // If you store `fail_high`, the value is at least 16.
+// store `fail_low` in the `type` field, the value of the node was at most 16.
+// If you store `fail_high`, the value is at least 16.
 void cache::insert(hash_t h, const move &m, int draft, score_type t,
                    score v) noexcept
 {

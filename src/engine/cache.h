@@ -17,7 +17,8 @@
 namespace testudo
 {
 
-enum class score_type {ignore, exact, fail_high /* cut */, fail_low};
+enum class score_type : std::uint8_t
+{ignore, exact, fail_high /* cut */, fail_low};
 
 // cache class (aka transposition table)
 //
@@ -58,16 +59,20 @@ public:
   struct info
   {
     info(hash_t h = 0, move m = move::sentry(), int d = 0,
-         score_type t = score_type::fail_low, score v = -INF, unsigned a = 0)
+         score_type t = score_type::fail_low, score v = -INF,
+         std::uint8_t a = 0)
       : hash(h), best_move(m), draft(d), type(t), value(v), age(a)
-    {}
+    {
+      assert(std::numeric_limits<decltype(value)>::min() <= v);
+      assert(v <= std::numeric_limits<decltype(value)>::max());
+    }
 
-    hash_t     hash;
-    move       best_move;
-    int        draft;
-    score_type type;
-    score      value;
-    unsigned   age;
+    hash_t         hash;
+    move      best_move;
+    int           draft;
+    std::uint16_t value;
+    score_type     type;
+    std::uint8_t    age;
   };
 
   explicit cache(std::uint8_t bits = 18) : tt_(1 << bits), age_(0) {}
@@ -82,7 +87,7 @@ private:
   { return h & (tt_.size() - 1); }
 
   std::vector<std::pair<info, info>> tt_;
-  unsigned age_;
+  decltype(info::age) age_;
 };
 
 }  // namespace testudo
