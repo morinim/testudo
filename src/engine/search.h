@@ -57,9 +57,10 @@ private:
 
   state root_state_;
 
-  struct search_path_info
+  // Contains information about the path leading to the node being analyzed.
+  struct path_info
   {
-    explicit search_path_info(const std::vector<state> &);
+    explicit path_info(const std::vector<state> &);
 
     bool repetitions() const;
 
@@ -67,23 +68,26 @@ private:
     void pop();
 
     std::vector<hash_t> states;  // used for repetition detection
-  } search_path_info_;
+  } path_info_;
 
   cache *tt_;
 
-  timer search_time_;
+  timer   search_time_;
   bool search_stopped_;
 };  // class search
 
-// `states` is the sequence of states reached until now. It could be a partial
-// list (e.g. for FEN positions) but `states.back()` must contain the current
-// state.
+// - `states` is the sequence of states reached until now. It could be a
+//   partial list (e.g. for FEN positions) but `states.back()` must contain the
+//   current state.
+// - `tt` is a pointer to an external hash table.
 inline search::search(const std::vector<state> &states, cache *tt)
   : stats(), max_time(0), max_depth(0), root_state_(states.back()),
-    search_path_info_(states), tt_(tt), search_time_(), search_stopped_(false)
+    path_info_(states), tt_(tt), search_time_(), search_stopped_(false)
 {
   assert(!states.empty());
   assert(tt);
+
+  assert(!path_info_.states.empty());
 }
 
 }  // namespace testudo

@@ -22,8 +22,8 @@ namespace testudo
 // positional scores.
 using score = int;
 
-constexpr score  INF(40000);
-constexpr score MATE(32000);
+constexpr score  INF(32000);
+constexpr score MATE(31000);
 
 inline bool is_mate(score s) { return std::abs(s) >= MATE - 500; }
 

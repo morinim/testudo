@@ -24,7 +24,7 @@ class game
 {
 public:
   game() : show_search_info(true), ics(false),
-           states_({state(state::setup::start)}), tt_(), computer_side_(-1),
+           tt_(), states_({state(state::setup::start)}), computer_side_(-1),
            max_depth_(0), time_info_()
   {}
 

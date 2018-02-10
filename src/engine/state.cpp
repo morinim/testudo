@@ -465,7 +465,7 @@ void state::clear_square(square i)
 // updated stuff: hash keys, piece counters, king location...
 void state::fill_square(piece p, square i)
 {
-  assert(board_[i].empty());
+  assert(board_[i] == EMPTY);
 
   hash_ ^= zobrist::piece[p.id()][i];
   board_[i] = p;

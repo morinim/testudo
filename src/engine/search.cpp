@@ -21,23 +21,26 @@ namespace testudo
 
 // Extraxt from the list of past known states (`ss`) a subset of hash values
 // used for repetition detection.
-search::search_path_info::search_path_info(const std::vector<state> &ss)
+search::path_info::path_info(const std::vector<state> &ss)
 {
-  assert(!states.empty());
+  assert(!ss.empty());
 
   const state current(ss.back());
 
-  const std::size_t start(ss.size() >= current.fifty()
-                          ? ss.size() - current.fifty()
+  const std::size_t start(ss.size() > current.fifty()
+                          ? ss.size() - 1 - current.fifty()
                           : 0);
 
   for (auto i(start); i < ss.size(); ++i)
     states.push_back(ss[i].hash());
+
+  assert(!states.empty());
+  assert(states.back() == current.hash());
 }
 
 // Returns `true` if the current position (`states_.back()`) has been
 // repeated (compares the current hash value to already seen values).
-bool search::search_path_info::repetitions() const
+bool search::path_info::repetitions() const
 {
   assert(!states.empty());
 
@@ -50,12 +53,12 @@ bool search::search_path_info::repetitions() const
   return i != current;
 }
 
-void search::search_path_info::push(const state &current)
+void search::path_info::push(const state &current)
 {
   states.push_back(current.hash());
 }
 
-void search::search_path_info::pop()
+void search::path_info::pop()
 {
   states.pop_back();
 }
@@ -173,8 +176,8 @@ score search::alphabeta_root(const state &s, score alpha, score beta, int draft)
 
   ++stats.snodes;
 
-  search_path_info_.push(s);
-  auto guard = finally([&]{ search_path_info_.pop(); });
+  path_info_.push(s);
+  auto guard = finally([&]{ path_info_.pop(); });
 
   auto &moves(stats.moves_at_root);
   if (moves.empty())
@@ -245,8 +248,8 @@ score search::alphabeta(const state &s, score alpha, score beta,
       return 0;
   }
 
-  search_path_info_.push(s);
-  auto guard = finally([&]{ search_path_info_.pop(); });
+  path_info_.push(s);
+  auto guard = finally([&]{ path_info_.pop(); });
 
   // Check to see if this position has been searched before. If so, we may get
   // a real score, produce a cutoff or get nothing more than a good move to try
@@ -287,7 +290,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
   if (moves.empty())
     return in_check ? -MATE + ply : 0;
 
-  if (search_path_info_.repetitions() || s.fifty() >= 100)
+  if (path_info_.repetitions() || s.fifty() >= 100)
     return 0;
 
   auto best_move(move::sentry());
@@ -357,7 +360,9 @@ score search::aspiration_search(score *alpha, score *beta, int draft)
     return 0;
 
   if (x <= *alpha || x >= *beta)
+  {
     x = alphabeta_root(root_state_, -INF, +INF, draft);
+  }
 
   if (search_stopped_)
     return 0;
@@ -378,7 +383,7 @@ score search::aspiration_search(score *alpha, score *beta, int draft)
 // framework with best-first characteristics.
 move search::run(bool verbose)
 {
-  switch (root_state_.mate_or_draw(&search_path_info_.states))
+  switch (root_state_.mate_or_draw(&path_info_.states))
   {
   case state::kind::mated:
   case state::kind::draw_stalemate:

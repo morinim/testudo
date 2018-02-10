@@ -61,18 +61,18 @@ public:
     info(hash_t h = 0, move m = move::sentry(), int d = 0,
          score_type t = score_type::fail_low, score v = -INF,
          std::uint8_t a = 0)
-      : hash(h), best_move(m), draft(d), type(t), value(v), age(a)
+      : hash(h), best_move(m), draft(d), value(v), type(t), age(a)
     {
       assert(std::numeric_limits<decltype(value)>::min() <= v);
       assert(v <= std::numeric_limits<decltype(value)>::max());
     }
 
-    hash_t         hash;
-    move      best_move;
-    int           draft;
-    std::uint16_t value;
-    score_type     type;
-    std::uint8_t    age;
+    hash_t        hash;
+    move     best_move;
+    int          draft;
+    std::int16_t value;
+    score_type    type;
+    std::uint8_t   age;
   };
 
   explicit cache(std::uint8_t bits = 18) : tt_(1 << bits), age_(0) {}
