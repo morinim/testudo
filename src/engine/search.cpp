@@ -361,6 +361,10 @@ score search::aspiration_search(score *alpha, score *beta, int draft)
 
   if (x <= *alpha || x >= *beta)
   {
+    std::cout << stats.depth << ' ' << (x <= *alpha ? "--" : "++") << ' '
+              << search_time_.elapsed().count() / 10 << ' ' << stats.snodes
+              << ' ' << stats.moves_at_root.front() << std::endl;
+
     x = alphabeta_root(root_state_, -INF, +INF, draft);
   }
 
