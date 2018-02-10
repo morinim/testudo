@@ -32,6 +32,16 @@ T between(T min, T max)
   return d(engine());
 }
 
+// Returns a random element of a container.
+template<class C>
+const typename C::value_type &element(const C &c)
+{
+  assert(c.size());
+
+  return *std::next(c.begin(),
+                    between<typename C::difference_type>(0, c.size() - 1));
+}
+
 template<class T>
 T number()
 {

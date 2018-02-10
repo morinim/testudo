@@ -207,8 +207,8 @@ TEST_CASE("piece")
   CHECK(WROOK.offsets().size()   == 4);
   CHECK(BQUEEN.offsets().size()  == 8);
   CHECK(WQUEEN.offsets().size()  == 8);
-  //CHECK(BQUEEN.offsets() == BKING.offsets());
-  //CHECK(WQUEEN.offsets() == WKING.offsets());
+  CHECK(BKING.offsets().size()   == 8);
+  CHECK(WKING.offsets().size()   == 8);
 
   CHECK(BPAWN.color()   == BLACK);
   CHECK(BKNIGHT.color() == BLACK);
@@ -295,7 +295,7 @@ TEST_CASE("state")
   CHECK(moves.size() == 20);
 
   const state start1(
-    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -");
   CHECK(start == start1);
 }
 
@@ -394,7 +394,45 @@ TEST_CASE("hash_update")
     CHECK(hash_tree(test.state, test.moves.size()));
 }
 
-TEST_CASE("search")
+TEST_CASE("hash_store_n_probe")
+{
+  cache tt(21);
+
+  for (int g(0); g < 100; ++g)
+  {
+    state pos(state::setup::start);
+    std::vector<hash_t> previous_states({pos.hash()});
+
+    for (int mn(0);
+         pos.mate_or_draw(&previous_states) == state::kind::standard;
+         ++mn)
+    {
+      const auto moves(pos.moves());
+      const auto rm(random::element(moves));
+
+      tt.insert(pos.hash(), rm, mn, score_type::ignore, g);
+
+      const auto *slot(tt.find(pos.hash()));
+      CHECK(slot);
+      if (slot->value == g)
+      {
+        CHECK(slot->best_move == rm);
+        CHECK(slot->draft == mn);
+        CHECK(slot->type == score_type::ignore);
+      }
+      else
+      {
+        CHECK(slot->draft > mn);
+      }
+
+      CHECK(pos.make_move(rm));
+
+      previous_states.push_back(pos.hash());
+    }
+  }
+}
+
+TEST_CASE("search_with_no_move")
 {
   const state p("8/8/8/5K1k/8/8/8/7R b - -");
 

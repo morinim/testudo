@@ -114,7 +114,7 @@ std::ostream &operator<<(std::ostream &o, const state &s)
       std::cout << '\n' << rank(i);
   }
 
-  std::cout << "\n\n  a b c d e f g h\n\n";
+  std::cout << "\n\n  a b c d e f g h\n";
   return o;
 }
 
