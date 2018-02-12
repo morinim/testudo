@@ -21,7 +21,8 @@ enum class score_type : std::uint8_t
 {ignore, exact, fail_high /* cut */, fail_low};
 
 // The cache class (aka transposition table) consists of a power of 2 number of
-// slots. Each non-empty slot contains information of exactly one position.
+// `slot`-`slot` pairs. Each non-empty slot contains information about exactly
+// one position.
 //
 // NOTE
 // A problem that happens when you start using a transposition hash table, if
@@ -86,7 +87,7 @@ private:
   std::size_t get_index(hash_t h) const noexcept
   { return h & (tt_.size() - 1); }
 
-  std::vector<slot> tt_;
+  std::vector<std::pair<slot, slot>> tt_;
   decltype(slot::age_) age_;
 };
 

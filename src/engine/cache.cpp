@@ -35,17 +35,44 @@ inline constexpr void cache::slot::save(hash_t h, move m, int d, score_type t,
   age_   = a;
 }
 
-// Looks up a position in the cache. Returns pointer to the `slot` if the
+// Looks up a position in the cache. Returns pointer to a `slot` if the
 // position is found. Otherwise, returns `nullptr`.
+// If available, we prefer the information of the always-replace slot.
+// The logic follows:
+// > Draft is a highly over-valued property of TT entries. Of course a hit on
+// > an entry of very high draft (with OK bounds) can save you a lot of work,
+// > much more than on an entry with low draft. But the point that is often
+// > overlooked, is that hash probes that need high draft are much less
+// > frequent than probes for which a low draft already suffices.
+// > From the viewpoint of the hash slot, having a slot store a single d=20
+// > entry on which you get 1 hit does less good than a slot that stored 1000
+// > different d=10 entries on which you get 5 hits each. So it is in fact not
+// > obvious that preferring high drafts buys you anything at all.
+// > A much more important effect is that the distribution of hash hits on a
+// > given position decreases in time. Immediately after the entry was created,
+// > there is a large probability it will be quickly revisited, through a
+// > transposition of recent moves (i.e. moves close to the leaves). After that
+// > you become dependent on transpositions with moves closer to the root, and
+// > such moves have a much slower turnover.
+// (H.G. Muller)
 const cache::slot *cache::find(hash_t h) noexcept
 {
   auto &elem(tt_[get_index(h)]);
 
-  if (elem.hash() != h)
-    return nullptr;
+  if (elem.first.hash() == h)
+  {
+    // The replace-always slot doesn't use the age information.
+    // elem.first.age(age_);
+    return &elem.first;
+  }
 
-  elem.age(age_);
-  return &elem;
+  if (elem.second.hash() == h)
+  {
+    elem.second.age(age_);
+    return &elem.second;
+  }
+
+  return nullptr;
 }
 
 // When you get a result from a search, and you want to store an element in the
@@ -68,41 +95,9 @@ const cache::slot *cache::find(hash_t h) noexcept
 // store `fail_low` in the `type` field, the value of the node was at most 16.
 // If you store `fail_high`, the value is at least 16.
 //
-// As for the replacement strategy we keep it simple: (almost) always
-// overwrite. Consider that:
-// > it is always better to overwrite even with a lower depth entry, this is
-// > because beta changes from one search to another. So it is totally unuseful
-// > to have a 20 depth entry with type lower bound and value 100 when current
-// > beta is 200. In this example it would be better for example to overwrite
-// > with a depth 5 entry but lower bound set at 300.
-// > IMHO with very aggressive aspiration window it is more important that
-// > values are near current beta then the depth.
-// (Marco Costalba)
-//
-// > Remember, if you are storing over an existing entry with the same
-// > signature, you must have probed and hit when you started the search at
-// > this ply, yet the entry was not good enough to stop the search... So since
-// > it was useless, there is no reason to hang on to it just because it has a
-// > better draft or whatever... It makes more sense to overwrite a useless
-// > entry with something that might be more useful next time...
-// (Robert Hyatt)
-//
-// > Draft is a highly over-valued property of TT entries. Of course a hit on
-// > an entry of very high draft (with OK bounds) can save you a lot of work,
-// > much more than on an entry with low draft. But the point that is often
-// > overlooked, is that hash probes that need high draft are much less
-// > frequent than probes for which a low draft already suffices.
-// > From the viewpoint of the hash slot, having a slot store a single d=20
-// > entry on which you get 1 hit does less good than a slot that stored 1000
-// > different d=10 entries on which you get 5 hits each. So it is in fact not
-// > obvious that preferring high drafts buys you anything at all.
-// > A much more important effect is that the distribution of hash hits on a
-// > given position decreases in time. Immediately after the entry was created,
-// > there is a large probability it will be quickly revisited, through a
-// > transposition of recent moves (i.e. moves close to the leaves). After that
-// > you become dependent on transpositions with moves closer to the root, and
-// > such moves have a much slower turnover.
-// (H.G. Muller)
+// As for the replacement strategy we use a two-tier system (the strategy was
+// devised by Ken Thompson and Joe Condon): for each table entry there is a
+// always-replace and depth-preferred slot.
 void cache::insert(hash_t h, const move &m, int draft, score_type t,
                    score v) noexcept
 {
@@ -138,11 +133,17 @@ void cache::insert(hash_t h, const move &m, int draft, score_type t,
 
   auto &elem(tt_[get_index(h)]);
 
-  if (elem.hash() != h
-      || elem.age() != age_
-      || elem.draft() < draft + 5 * search::PLY
-      || t == score_type::exact)
-    elem.save(h, m, draft, t, v, age_);
+  // Always replace slot.
+  elem.first.save(h, m, draft, t, v, age_);
+
+  // Depth preferred slot.
+  // Here, using a "replace if deeper or same depth" scheme, the cache might
+  // eventually fill up with outdated deep nodes. The solution to this is add a
+  // "age" field to the slot, so the replacement scheme becomes: "replace if
+  // same depth, deeper or the element pertains to an ancient search".
+  if (elem.second.age() != age_
+      || elem.second.draft() <= draft)
+    elem.second.save(h, m, draft, t, v, age_);
 }
 
 }  // namespace testudo

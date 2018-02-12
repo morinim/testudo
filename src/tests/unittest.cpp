@@ -396,7 +396,7 @@ TEST_CASE("hash_update")
 
 TEST_CASE("hash_store_n_probe")
 {
-  cache tt(21);
+  cache tt(20);
 
   for (int g(0); g < 100; ++g)
   {
@@ -419,6 +419,10 @@ TEST_CASE("hash_store_n_probe")
         CHECK(slot->best_move() == rm);
         CHECK(slot->draft() == mn);
         CHECK(slot->type() == score_type::ignore);
+      }
+      else
+      {
+        CHECK(slot->draft() > mn);
       }
 
       CHECK(pos.make_move(rm));
@@ -474,7 +478,7 @@ TEST_CASE("transposition_table")
   cache tt(21);
   search s({fine70}, &tt);
 
-  s.max_time = std::chrono::milliseconds(300000);
+  s.max_time = std::chrono::milliseconds(10000);
 
   const move m(s.run(true));
   CHECK(m == move(A1, B1, 0));
