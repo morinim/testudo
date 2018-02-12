@@ -20,24 +20,10 @@ namespace testudo
 enum class score_type : std::uint8_t
 {ignore, exact, fail_high /* cut */, fail_low};
 
-// cache class (aka transposition table)
+// The cache class (aka transposition table) consists of a power of 2 number of
+// slots. Each non-empty slot contains information of exactly one position.
 //
-// Every element of the cache has two slots:
-// - the first slot operates via a "replace if deeper or more recent search"
-//   replacement scheme.
-//   Every time a new search is started, a sequence number is incremented. If
-//   you try to insert an element into the table, it is inserted if the
-//   sequence number now is different than the one associated with the element
-//   in the table. If the sequence numbers are the same, an element will be
-//   inserted only if the depth associated with the element you are trying to
-//   add is greater than the depth associated with the element already here;
-// - the second slot operates via a "replace always" scheme. If you try to
-//   insert an element into the table, it always is inserted.
-//
-// This scheme is due to Ken Thompson. His idea is that deep searches can stick
-// around for a while, while stuff that is very recent can also stay around,
-// even if it is shallow.
-//
+// NOTE
 // A problem that happens when you start using a transposition hash table, if
 // you allow the search to cut off based upon elements in the table, is that
 // your search suffers from instability.
@@ -56,28 +42,42 @@ enum class score_type : std::uint8_t
 class cache
 {
 public:
-  struct info
+  class slot
   {
-    info(hash_t h = 0, move m = move::sentry(), int d = 0,
-         score_type t = score_type::fail_low, score v = -INF,
-         std::uint8_t a = 0)
-      : hash(h), best_move(m), draft(d), value(v), type(t), age(a)
+  public:
+    constexpr slot(hash_t h = 0, move m = move::sentry(), int d = 0,
+                   score_type t = score_type::fail_low, score v = -INF,
+                   std::uint8_t a = 0) noexcept
+    : hash_(h), best_move_(m), draft_(d), value_(v), type_(t), age_(a)
     {
       assert(std::numeric_limits<decltype(value)>::min() <= v);
       assert(v <= std::numeric_limits<decltype(value)>::max());
     }
 
-    hash_t        hash;
-    move     best_move;
-    int          draft;
-    std::int16_t value;
-    score_type    type;
-    std::uint8_t   age;
+    constexpr void save(hash_t, move, int, score_type, score,
+                        std::uint8_t) noexcept;
+
+    constexpr const hash_t &hash() const noexcept { return hash_; }
+    constexpr const move &best_move() const noexcept { return best_move_; }
+    constexpr int draft() const noexcept { return draft_; }
+    constexpr score_type type() const noexcept { return type_; }
+    constexpr score value() const noexcept { return value_; }
+    constexpr std::uint8_t age() const noexcept { return age_; }
+
+    void age(std::uint8_t a) noexcept { age_ = a; }
+
+  private:
+    hash_t        hash_;
+    move     best_move_;
+    int          draft_;
+    std::int16_t value_;
+    score_type    type_;
+    std::uint8_t   age_;
   };
 
-  explicit cache(std::uint8_t bits = 18) : tt_(1 << bits), age_(0) {}
+  explicit cache(std::uint8_t bits = 19) : tt_(1 << bits), age_(0) {}
 
-  const info *find(hash_t) const noexcept;
+  const slot *find(hash_t) noexcept;
   void insert(hash_t, const move &, int, score_type, score) noexcept;
 
   void inc_age() { ++age_; }
@@ -86,8 +86,8 @@ private:
   std::size_t get_index(hash_t h) const noexcept
   { return h & (tt_.size() - 1); }
 
-  std::vector<std::pair<info, info>> tt_;
-  decltype(info::age) age_;
+  std::vector<slot> tt_;
+  decltype(slot::age_) age_;
 };
 
 }  // namespace testudo

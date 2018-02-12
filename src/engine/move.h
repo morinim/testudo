@@ -22,9 +22,8 @@ struct move
   using flags_t = std::uint16_t;
   enum
   {
-    capture = 1, castle = 2, en_passant = 4, two_squares = 8,
-    pawn = 16, promotion_n = 32, promotion_b = 64, promotion_r = 128,
-    promotion_q = 256,
+    capture = 1, castle = 2, en_passant = 4, two_squares = 8, pawn = 16,
+    promotion_n = 32, promotion_b = 64, promotion_r = 128, promotion_q = 256,
     promotion = promotion_n|promotion_b|promotion_r|promotion_q
   };
 

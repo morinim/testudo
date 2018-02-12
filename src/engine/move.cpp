@@ -9,6 +9,7 @@
  */
 
 #include "move.h"
+#include <sstream>
 
 namespace testudo
 {
@@ -16,13 +17,18 @@ namespace testudo
 // Move in coordinate notation (g1f3, a7a8q).
 std::ostream &operator<<(std::ostream &o, const move &m)
 {
-  o << char('a' + file(m.from)) << 1 + rank(m.from)
-    << char('a' + file(m.to)) << 1 + rank(m.to);
+  if (m.is_sentry())
+    return o << '-';
+
+  std::ostringstream ss;
+
+  ss << char('a' + file(m.from)) << 1 + rank(m.from)
+     << char('a' + file(m.to)) << 1 + rank(m.to);
 
   if (m.flags & move::promotion)
-    o << piece(BLACK, m.promote());
+    ss << piece(BLACK, m.promote());
 
-  return o;
+  return o << ss.str();
 }
 
 }  // namespace testudo

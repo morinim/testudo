@@ -11,40 +11,98 @@
 #include <cassert>
 
 #include "cache.h"
+#include "search.h"
 
 namespace testudo
 {
 
-const cache::info *cache::find(hash_t h) const noexcept
+// Fills the slot with the given information. The procedure may keep some of
+// the existing information if they're about the same position.
+inline constexpr void cache::slot::save(hash_t h, move m, int d, score_type t,
+                                        score v, std::uint8_t a) noexcept
 {
-  const auto &p(tt_[get_index(h)]);
+  assert(std::numeric_limits<decltype(value)>::min() <= v);
+  assert(v <= std::numeric_limits<decltype(value)>::max());
 
-  if (p.first.hash == h)
-    return &p.first;
-  else if (p.second.hash == h)
-    return &p.second;
+  // Preserve any existing move for the same position.
+  if (!m.is_sentry() || hash_ != h)
+    best_move_ = m;
 
-  return nullptr;
+  hash_  = h;
+  draft_ = d;
+  value_ = v;
+  type_  = t;
+  age_   = a;
+}
+
+// Looks up a position in the cache. Returns pointer to the `slot` if the
+// position is found. Otherwise, returns `nullptr`.
+const cache::slot *cache::find(hash_t h) noexcept
+{
+  auto &elem(tt_[get_index(h)]);
+
+  if (elem.hash() != h)
+    return nullptr;
+
+  elem.age(age_);
+  return &elem;
 }
 
 // When you get a result from a search, and you want to store an element in the
-// table, it's important to record how deep the search went. If you searched
-// this position with a 3-ply search, and you come along later planning to do a
-// 10-ply search, you can't assume that the information in this hash element is
-// accurate. So the search draft for the sub-tree is also recorded.
-// In an alpha-beta search, rarely do you get an exact value when you search a
-// node.  "Alpha" and "beta" exist to help you prune out useless sub-trees, but
+// table, it's important to record how deep the search went (`draft`). If you
+// searched this position with a 3-ply search and you come along later planning
+// to do a 10-ply search, you can't assume that the information in this hash
+// element is accurate. So the search draft for the sub-tree is recorded.
+//
+// In an alpha-beta search, you rarely get an exact value when you search a
+// node. "alpha" and "beta" exist to help you prune out useless sub-trees, but
 // the minor disadvantage to using alpha-beta is that you don't often know
 // exactly how bad or good a node is, you just know that it is bad enough or
 // good enough that you don't need to waste any more time on it.
 //
 // Of course, this raises the question as to what value you store in the hash
-// element, and what you can do with it when you retrieve it. The answer is to
-// store a value, and a flag that indicates what the value means.
+// element and what you can do with it when you retrieve it. The answer is to
+// store a value (`v`) and a flag (`t`) that indicates what the value means.
 // If you store, let's say, a 16 in the `value` field, and `exact` in the
 // `type` field, this means that the value of the node was exactly 16. If you
 // store `fail_low` in the `type` field, the value of the node was at most 16.
 // If you store `fail_high`, the value is at least 16.
+//
+// As for the replacement strategy we keep it simple: (almost) always
+// overwrite. Consider that:
+// > it is always better to overwrite even with a lower depth entry, this is
+// > because beta changes from one search to another. So it is totally unuseful
+// > to have a 20 depth entry with type lower bound and value 100 when current
+// > beta is 200. In this example it would be better for example to overwrite
+// > with a depth 5 entry but lower bound set at 300.
+// > IMHO with very aggressive aspiration window it is more important that
+// > values are near current beta then the depth.
+// (Marco Costalba)
+//
+// > Remember, if you are storing over an existing entry with the same
+// > signature, you must have probed and hit when you started the search at
+// > this ply, yet the entry was not good enough to stop the search... So since
+// > it was useless, there is no reason to hang on to it just because it has a
+// > better draft or whatever... It makes more sense to overwrite a useless
+// > entry with something that might be more useful next time...
+// (Robert Hyatt)
+//
+// > Draft is a highly over-valued property of TT entries. Of course a hit on
+// > an entry of very high draft (with OK bounds) can save you a lot of work,
+// > much more than on an entry with low draft. But the point that is often
+// > overlooked, is that hash probes that need high draft are much less
+// > frequent than probes for which a low draft already suffices.
+// > From the viewpoint of the hash slot, having a slot store a single d=20
+// > entry on which you get 1 hit does less good than a slot that stored 1000
+// > different d=10 entries on which you get 5 hits each. So it is in fact not
+// > obvious that preferring high drafts buys you anything at all.
+// > A much more important effect is that the distribution of hash hits on a
+// > given position decreases in time. Immediately after the entry was created,
+// > there is a large probability it will be quickly revisited, through a
+// > transposition of recent moves (i.e. moves close to the leaves). After that
+// > you become dependent on transpositions with moves closer to the root, and
+// > such moves have a much slower turnover.
+// (H.G. Muller)
 void cache::insert(hash_t h, const move &m, int draft, score_type t,
                    score v) noexcept
 {
@@ -78,13 +136,13 @@ void cache::insert(hash_t h, const move &m, int draft, score_type t,
     }
   }
 
-  info i(h, m, draft, t, v, age_);
+  auto &elem(tt_[get_index(h)]);
 
-  auto &entry(tt_[get_index(h)]);
-  if (entry.first.draft <= i.draft || entry.first.age != age_)
-    entry.first = i;
-  else
-    entry.second = i;
+  if (elem.hash() != h
+      || elem.age() != age_
+      || elem.draft() < draft + 5 * search::PLY
+      || t == score_type::exact)
+    elem.save(h, m, draft, t, v, age_);
 }
 
 }  // namespace testudo

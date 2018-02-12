@@ -24,26 +24,29 @@ class cache;
 class search
 {
 public:
+  static constexpr int PLY = 16;
+
   search(const std::vector<state> &, cache *);
 
   move run(bool);
 
   struct statistics
   {
-    statistics() : moves_at_root(), snodes(0), qnodes(0), depth(0) {}
+    statistics() : moves_at_root(), snodes(0), qnodes(0), depth(0),
+                   score_at_root(0) {}
     void reset() { *this = statistics(); }
 
     movelist       moves_at_root;
     std::uintmax_t        snodes;  // search nodes
     std::uintmax_t        qnodes;  // quiescence search nodes
     unsigned               depth;  // depth reached
+    score          score_at_root;
   } stats;
 
   std::chrono::milliseconds max_time;
   unsigned                 max_depth;
 
 private:
-  static constexpr int PLY = 16;
   static constexpr std::uintmax_t nodes_between_checks = 2048;
 
   score alphabeta(const state &, score, score, unsigned, int);

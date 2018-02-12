@@ -414,15 +414,11 @@ TEST_CASE("hash_store_n_probe")
 
       const auto *slot(tt.find(pos.hash()));
       CHECK(slot);
-      if (slot->value == g)
+      if (slot->value() == g)
       {
-        CHECK(slot->best_move == rm);
-        CHECK(slot->draft == mn);
-        CHECK(slot->type == score_type::ignore);
-      }
-      else
-      {
-        CHECK(slot->draft > mn);
+        CHECK(slot->best_move() == rm);
+        CHECK(slot->draft() == mn);
+        CHECK(slot->type() == score_type::ignore);
       }
 
       CHECK(pos.make_move(rm));

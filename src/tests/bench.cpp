@@ -10,6 +10,9 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include <fstream>
+#include <iomanip>
+
 #include "engine/testudo.h"
 
 // Runs a simple six-position benchmark to gauge performance. The test
@@ -27,7 +30,6 @@ std::chrono::seconds bench()
     testudo::state state;
     unsigned depth;
   };
-
   const std::vector<test_elem> db(
   {
     {
@@ -62,15 +64,22 @@ std::chrono::seconds bench()
     }
   });
 
-  std::cout << "Running benchmark...\n\n";
+  struct result
+  {
+    seconds time = seconds(0);
+    std::uintmax_t snodes = 0;
+    std::uintmax_t qnodes = 0;
+    move best_move = move::sentry();
+    score val = 0;
+  };
+  std::vector<result> results;
 
-  seconds total_time(0);
-  std::uintmax_t snodes(0), qnodes(0);
+  std::cout << "Running benchmark...\n\n";
 
   for (const auto &p : db)
   {
     std::cout << p.state;
-    cache tt(20);
+    cache tt(21);
 
     timer t;
     search s({p.state}, &tt);
@@ -78,18 +87,65 @@ std::chrono::seconds bench()
     s.max_time  = milliseconds(0);
     s.max_depth = p.depth;
 
-    s.run(true);
-    total_time += duration_cast<seconds>(t.elapsed());
-    snodes += s.stats.snodes;
-    qnodes += s.stats.qnodes;
+    const auto m(s.run(true));
+
+    results.push_back({duration_cast<seconds>(t.elapsed()),
+          s.stats.snodes, s.stats.qnodes, m, s.stats.score_at_root});
+
     std::cout << '\n';
   }
 
-  std::cout << "\nTotal time: " << total_time.count() << "s\n"
-            << "Nodes: " << snodes + qnodes
-            << " (search: " << snodes
-            << ", quiescence: " << qnodes << ")\n"
-            << "NPS: " << (snodes + qnodes) / total_time.count() << '\n';
+  std::ofstream out("bench.csv");
+
+  const auto nps(
+    [](auto nodes, seconds t)
+    {
+      return nodes / std::max<unsigned>(1, t.count());
+    });
+
+  const auto print(
+    [&](const result &r)
+    {
+      std::cout << std::right << std::setw(6) << std::setfill(' ')
+                << r.time.count() << "s "
+                << std::right << std::setw(12) << std::setfill(' ') << r.snodes
+                << ' '
+                << std::right << std::setw(12) << std::setfill(' ') << r.qnodes
+                << ' '
+                << std::right << std::setw(8) << std::setfill(' ')
+                << nps(r.snodes + r.qnodes, r.time) << ' '
+                << std::left << std::setw(6) << std::setfill(' ')
+                << r.best_move << ' '
+                << std::right << std::setw(6) << std::setfill(' ') << r.val
+                << '\n';
+
+      if (!r.best_move.is_sentry())
+        out << r.time.count() << ','
+            << r.snodes << ',' << r.qnodes << ','
+            << nps(r.snodes + r.qnodes, r.time) << ','
+            << r.best_move << ',' << r.val << '\n';
+    });
+
+  int n(0);
+  seconds total_time(0);
+  std::uintmax_t snodes(0), qnodes(0);
+  score val(0);
+  for (const auto &r : results)
+  {
+    print(r);
+
+    total_time += r.time;
+    snodes += r.snodes;
+    qnodes += r.qnodes;
+    val += r.val;
+
+    ++n;
+  }
+
+  val = val / n;
+
+  std::cout << std::string(70, '-') << '\n';
+  print(result{total_time, snodes, qnodes, move::sentry(), val});
 
   return total_time;
 }

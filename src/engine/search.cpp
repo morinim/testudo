@@ -116,7 +116,7 @@ score search::quiesce(const state &s, score alpha, score beta)
 movelist search::sorted_moves(const state &s)
 {
   const auto entry(tt_->find(s.hash()));
-  const move best_move(entry ? entry->best_move : move::sentry());
+  const move best_move(entry ? entry->best_move() : move::sentry());
 
   const auto move_score(
     [&](const move &m)
@@ -266,17 +266,17 @@ score search::alphabeta(const state &s, score alpha, score beta,
   //   position before, we searched one branch (probably) which promptly
   //   refuted the move at the previous ply.
   const auto entry(tt_->find(s.hash()));
-  if (entry && entry->draft >= draft)
-    switch (entry->type)
+  if (entry && entry->draft() >= draft)
+    switch (entry->type())
     {
     case score_type::exact:
-      return entry->value;
+      return entry->value();
     case score_type::fail_low:
-      if (entry->value <= alpha)
+      if (entry->value() <= alpha)
         return alpha;
       break;
     case score_type::fail_high:
-      if (entry->value >= beta)
+      if (entry->value() >= beta)
         return beta;
       break;
     default:  // score_type::ignore
@@ -333,11 +333,11 @@ movelist search::extract_pv() const
 
   auto s(root_state_);
   for (auto entry(tt_->find(s.hash()));
-       entry && !entry->best_move.is_sentry()
+       entry && !entry->best_move().is_sentry()
        && (pv.size() <= 2 * stats.depth || pv.empty())
-       && s.make_move(entry->best_move);)
+       && s.make_move(entry->best_move());)
   {
-    pv.push_back(entry->best_move);
+    pv.push_back(entry->best_move());
     entry = tt_->find(s.hash());
   }
 
@@ -370,6 +370,8 @@ score search::aspiration_search(score *alpha, score *beta, int draft)
 
   if (search_stopped_)
     return 0;
+
+  stats.score_at_root = x;
 
   *alpha = x - 50;
   *beta  = x + 50;
