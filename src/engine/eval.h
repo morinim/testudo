@@ -11,7 +11,6 @@
 #if !defined(TESTUDO_EVAL_H)
 #define      TESTUDO_EVAL_H
 
-#include "parameters.h"
 #include "state.h"
 
 namespace testudo

@@ -8,6 +8,7 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include <cassert>
 #include <random>
 
 #if !defined(TESTUDO_RANDOM_H)

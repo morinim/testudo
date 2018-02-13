@@ -13,6 +13,7 @@
 
 #include "game.h"
 #include "log.h"
+#include "parameters.h"
 #include "search.h"
 
 namespace testudo

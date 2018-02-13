@@ -9,6 +9,7 @@
  */
 
 #include "eval.h"
+#include "parameters.h"
 
 namespace testudo
 {
