@@ -70,10 +70,8 @@ public:
   unsigned repetitions() const noexcept;
 
 private:
-  void add_m(movelist &, square from, square to,
-             decltype(move::flags) flags) const;
-  void add_pawn_m(movelist &, square from, square to,
-                  decltype(move::flags) flags) const;
+  void add_m(movelist &, square, square, move::flags_t) const;
+  void add_pawn_m(movelist &, square, square, move::flags_t) const;
   void add_pawn_captures(movelist &, square) const;
   void add_en_passant(movelist &) const;
   void clear_square(square);

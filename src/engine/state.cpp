@@ -244,7 +244,7 @@ state::state(const std::string &a_fen) : state(setup::empty)
 
 
 void state::add_m(movelist &moves, square from, square to,
-                  decltype(move::flags) flags) const
+                  move::flags_t flags) const
 {
   move m(from, to, flags);
 
@@ -254,7 +254,7 @@ void state::add_m(movelist &moves, square from, square to,
 }
 
 void state::add_pawn_m(movelist &moves, square from, square to,
-                       decltype(move::flags) flags) const
+                       move::flags_t flags) const
 {
   switch (rank(to))
   {
@@ -299,7 +299,7 @@ movelist state::moves() const
   movelist ret;
   ret.reserve(80);
 
-  const auto add([&](square from, square to, decltype(move::flags) flags)
+  const auto add([&](square from, square to, move::flags_t flags)
                  {
                    state::add_m(ret, from, to, flags);
                  });
@@ -323,13 +323,16 @@ movelist state::moves() const
   });
 
   for (square i(0); i < 64; ++i)
-    if (board_[i] != EMPTY && board_[i].color() == side())
+  {
+    const piece p(board_[i]);
+
+    if (p != EMPTY && p.color() == side())
     {
-      if (board_[i].type() == piece::pawn)
+      if (p.type() == piece::pawn)
         add_pawn_moves(i);
       else
       {
-        for (auto delta : board_[i].offsets())
+        for (auto delta : p.offsets())
           for (square to(mailbox[mailbox64[i] + delta]);
                valid(to);
                to = mailbox[mailbox64[to] + delta])
@@ -341,11 +344,12 @@ movelist state::moves() const
               break;
             }
             add(i, to, 0);
-            if (!board_[i].slide())
+            if (!p.slide())
               break;
           }
       }
     }
+  }
 
   // Castle moves.
   if (side() == WHITE)
@@ -380,19 +384,22 @@ movelist state::captures() const
   ret.reserve(40);
 
   // Just a shortcut for the add_m method.
-  const auto add([&](square from, square to, decltype(move::flags) flags)
+  const auto add([&](square from, square to, move::flags_t flags)
                  {
                    state::add_m(ret, from, to, flags);
                  });
 
   for (square i(0); i < 64; ++i)
-    if (board_[i] != EMPTY && board_[i].color() == side())
+  {
+    const piece p(board_[i]);
+
+    if (p != EMPTY && p.color() == side())
     {
-      if (board_[i].type() == piece::pawn)
+      if (p.type() == piece::pawn)
         add_pawn_captures(ret, i);
       else
       {
-        for (auto delta : board_[i].offsets())
+        for (auto delta : p.offsets())
           for (square to(mailbox[mailbox64[i] + delta]);
                valid(to);
                to = mailbox[mailbox64[to] + delta])
@@ -403,11 +410,12 @@ movelist state::captures() const
                 add(i, to, move::capture);
               break;
             }
-            if (!board_[i].slide())
+            if (!p.slide())
               break;
           }
       }
     }
+  }
 
   add_en_passant(ret);
 
@@ -417,9 +425,12 @@ movelist state::captures() const
 bool state::attack(square target, color attacker) const
 {
   for (square i(0); i < 64; ++i)
-    if (board_[i].color() == attacker)
+  {
+    const piece p(board_[i]);
+
+    if (p.color() == attacker)
     {
-      if (board_[i].type() == piece::pawn)
+      if (p.type() == piece::pawn)
       {
         for (auto delta : pawn_capture[attacker])
           if (mailbox[mailbox64[i] + delta] == target)
@@ -427,7 +438,7 @@ bool state::attack(square target, color attacker) const
       }
       else
       {
-        for (auto delta : board_[i].offsets())
+        for (auto delta : p.offsets())
           for (square to(mailbox[mailbox64[i] + delta]);
                valid(to);
                to = mailbox[mailbox64[to] + delta])
@@ -435,11 +446,12 @@ bool state::attack(square target, color attacker) const
             if (to == target)
               return true;
 
-            if (board_[to] != EMPTY || !board_[i].slide())
+            if (board_[to] != EMPTY || !p.slide())
               break;
           }
       }
     }
+  }
 
   return false;
 }
