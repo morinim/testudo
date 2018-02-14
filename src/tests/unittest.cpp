@@ -122,6 +122,30 @@ bool hash_tree(const state &s, unsigned depth)
   return true;
 }
 
+template<class F>
+void foreach_game(unsigned n, state pos, F f)
+{
+  for (unsigned i(0); i < n; ++i)
+  {
+    std::vector<hash_t> previous_states({pos.hash()});
+
+    for (int mn(0);
+         pos.mate_or_draw(&previous_states) == state::kind::standard;
+         ++mn)
+    {
+      const auto moves(pos.moves());
+      const auto rm(random::element(moves));
+
+      f(pos, rm);
+
+      CHECK(pos.make_move(rm));
+
+      previous_states.push_back(pos.hash());
+    }
+  }
+}
+
+
 TEST_SUITE("BASE")
 {
 
@@ -351,6 +375,23 @@ TEST_CASE("perft_captures")
       CHECK(perft<perft_type::capture>(test.state, i + 1) == test.captures[i]);
 }
 
+TEST_CASE("is_legal")
+{
+  foreach_game(100, state(state::setup::start),
+               [](const state &pos, const move &m)
+               {
+                 CHECK(pos.is_legal(m));
+
+                 // A legal move must have the correct flags.
+                 for (unsigned i(0); i < 8; ++i)
+                 {
+                   move m1(m);
+                   m1.flags ^= (1 << i);
+                   CHECK(!pos.is_legal(m1));
+                 }
+               });
+}
+
 TEST_CASE("hash_values")
 {
   std::set<hash_t> seen;
@@ -398,38 +439,22 @@ TEST_CASE("hash_store_n_probe")
 {
   cache tt(20);
 
-  for (int g(0); g < 100; ++g)
-  {
-    state pos(state::setup::start);
-    std::vector<hash_t> previous_states({pos.hash()});
+  foreach_game(100, state(state::setup::start),
+               [&tt](const state &pos, const move &m)
+               {
+                 tt.insert(pos.hash(), m, pos.hash() & 0xFF,
+                           score_type::ignore, pos.hash() & 0xFFF);
 
-    for (int mn(0);
-         pos.mate_or_draw(&previous_states) == state::kind::standard;
-         ++mn)
-    {
-      const auto moves(pos.moves());
-      const auto rm(random::element(moves));
+                 const auto *slot(tt.find(pos.hash()));
 
-      tt.insert(pos.hash(), rm, mn, score_type::ignore, g);
-
-      const auto *slot(tt.find(pos.hash()));
-      CHECK(slot);
-      if (slot->value() == g)
-      {
-        CHECK(slot->best_move() == rm);
-        CHECK(slot->draft() == mn);
-        CHECK(slot->type() == score_type::ignore);
-      }
-      else
-      {
-        CHECK(slot->draft() > mn);
-      }
-
-      CHECK(pos.make_move(rm));
-
-      previous_states.push_back(pos.hash());
-    }
-  }
+                 // With an always-replace strategy, the last element inserted
+                 // is always available.
+                 CHECK(slot);
+                 CHECK(slot->best_move() == m);
+                 CHECK(slot->draft() == (pos.hash() & 0xFF));
+                 CHECK(slot->type() == score_type::ignore);
+                 CHECK(slot->value() == (pos.hash() & 0xFFF));
+               });
 }
 
 TEST_CASE("search_with_no_move")

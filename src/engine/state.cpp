@@ -242,7 +242,6 @@ state::state(const std::string &a_fen) : state(setup::empty)
   ss >> s;
 }
 
-
 void state::add_m(movelist &moves, square from, square to,
                   move::flags_t flags) const
 {
@@ -253,33 +252,36 @@ void state::add_m(movelist &moves, square from, square to,
     moves.push_back(m);
 }
 
-void state::add_pawn_m(movelist &moves, square from, square to,
-                       move::flags_t flags) const
+template<class F>
+void state::process_pawn_m(F f, square from, square to,
+                           move::flags_t flags) const
 {
   switch (rank(to))
   {
   case 0:  // promotion
   case 7:
     for (unsigned j(move::promotion_n); j <= move::promotion_q; j <<= 1)
-      add_m(moves, from, to, flags|j);
+      f(from, to, flags|j);
     break;
   default:
-    add_m(moves, from, to, flags);
+    f(from, to, flags);
   }
 }
 
-void state::add_pawn_captures(movelist &moves, square i) const
+template<class F>
+void state::process_pawn_captures(F f, square i) const
 {
   for (auto delta : pawn_capture[side()])
   {
     const auto to(mailbox[mailbox64[i] + delta]);
 
     if (valid(to) && board_[to] != EMPTY && board_[to].color() != side())
-      add_pawn_m(moves, i, to, move::pawn|move::capture);
+      process_pawn_m(f, i, to, move::pawn|move::capture);
   }
 }
 
-void state::add_en_passant(movelist &moves) const
+template<class F>
+void state::process_en_passant(F f) const
 {
   if (valid(ep_))
     for (auto delta : pawn_capture[side()])
@@ -288,8 +290,81 @@ void state::add_en_passant(movelist &moves) const
 
       if (valid(from) && board_[from].color() == side()
           && board_[from].type() == piece::pawn)
-        add_m(moves, from, ep_, move::pawn|move::capture|move::en_passant);
+        f(from, ep_, move::pawn|move::capture|move::en_passant);
     }
+}
+
+template<class F>
+void state::for_each_move(F f) const
+{
+  const auto process_pawn_moves([&](square i) -> void
+  {
+    process_pawn_captures(f, i);
+
+    auto to(i + pawn_fwd[side()]);
+    if (board_[to] == EMPTY)
+    {
+      process_pawn_m(f, i, to, move::pawn);
+
+      if (rank(i) == pawn_base_rank(side()))
+      {
+        to += pawn_fwd[side()];
+        if (board_[to] == EMPTY)
+          process_pawn_m(f, i, to, move::pawn|move::two_squares);
+      }
+    }
+  });
+
+  for (square i(0); i < 64; ++i)
+  {
+    const piece p(board_[i]);
+
+    if (p != EMPTY && p.color() == side())
+    {
+      if (p.type() == piece::pawn)
+        process_pawn_moves(i);
+      else
+      {
+        for (auto delta : p.offsets())
+          for (square to(mailbox[mailbox64[i] + delta]);
+               valid(to);
+               to = mailbox[mailbox64[to] + delta])
+          {
+            if (board_[to] != EMPTY)
+            {
+              if (board_[to].color() != side())
+                f(i, to, move::capture);
+              break;
+            }
+            f(i, to, 0);
+            if (!p.slide())
+              break;
+          }
+      }
+    }
+  }
+
+  // Castle moves.
+  if (side() == WHITE)
+  {
+    if ((castle() & white_kingside)
+        && board_[F1] == EMPTY && board_[G1] == EMPTY)
+      f(E1, G1, move::castle);
+    if ((castle() & white_queenside)
+        && board_[B1] == EMPTY && board_[C1] == EMPTY && board_[D1] == EMPTY)
+      f(E1, C1, move::castle);
+  }
+  else
+  {
+    if ((castle() & black_kingside)
+        && board_[F8] == EMPTY && board_[G8] == EMPTY)
+      f(E8, G8, move::castle);
+    if ((castle() & black_queenside)
+        && board_[B8] == EMPTY && board_[C8] == EMPTY && board_[D8] == EMPTY)
+      f(E8, C8, move::castle);
+  }
+
+  process_en_passant(f);
 }
 
 movelist state::moves() const
@@ -304,24 +379,14 @@ movelist state::moves() const
                    state::add_m(ret, from, to, flags);
                  });
 
-  const auto add_pawn_moves([&](square i) -> void
-  {
-    add_pawn_captures(ret, i);
+  for_each_move(add);
 
-    auto to(i + pawn_fwd[side()]);
-    if (board_[to] == EMPTY)
-    {
-      add_pawn_m(ret, i, to, move::pawn);
+  return ret;
+}
 
-      if (rank(i) == pawn_base_rank(side()))
-      {
-        to += pawn_fwd[side()];
-        if (board_[to] == EMPTY)
-          add_pawn_m(ret, i, to, move::pawn|move::two_squares);
-      }
-    }
-  });
-
+template<class F>
+void state::for_each_capture(F f) const
+{
   for (square i(0); i < 64; ++i)
   {
     const piece p(board_[i]);
@@ -329,7 +394,7 @@ movelist state::moves() const
     if (p != EMPTY && p.color() == side())
     {
       if (p.type() == piece::pawn)
-        add_pawn_moves(i);
+        process_pawn_captures(f, i);
       else
       {
         for (auto delta : p.offsets())
@@ -340,10 +405,9 @@ movelist state::moves() const
             if (board_[to] != EMPTY)
             {
               if (board_[to].color() != side())
-                add(i, to, move::capture);
+                f(i, to, move::capture);
               break;
             }
-            add(i, to, 0);
             if (!p.slide())
               break;
           }
@@ -351,33 +415,11 @@ movelist state::moves() const
     }
   }
 
-  // Castle moves.
-  if (side() == WHITE)
-  {
-    if ((castle() & white_kingside)
-        && board_[F1] == EMPTY && board_[G1] == EMPTY)
-      add(E1, G1, move::castle);
-    if ((castle() & white_queenside)
-        && board_[B1] == EMPTY && board_[C1] == EMPTY && board_[D1] == EMPTY)
-      add(E1, C1, move::castle);
-  }
-  else
-  {
-    if ((castle() & black_kingside)
-        && board_[F8] == EMPTY && board_[G8] == EMPTY)
-      add(E8, G8, move::castle);
-    if ((castle() & black_queenside)
-        && board_[B8] == EMPTY && board_[C8] == EMPTY && board_[D8] == EMPTY)
-      add(E8, C8, move::castle);
-  }
-
-  add_en_passant(ret);
-
-  return ret;
+  process_en_passant(f);
 }
 
-// Basically a copy of state::moves(), just modified to generate only captures
-// and promotions.
+// Basically a copy of `state::moves()`, just modified to generate only
+// captures and promotions.
 movelist state::captures() const
 {
   movelist ret;
@@ -389,37 +431,29 @@ movelist state::captures() const
                    state::add_m(ret, from, to, flags);
                  });
 
-  for (square i(0); i < 64; ++i)
-  {
-    const piece p(board_[i]);
-
-    if (p != EMPTY && p.color() == side())
-    {
-      if (p.type() == piece::pawn)
-        add_pawn_captures(ret, i);
-      else
-      {
-        for (auto delta : p.offsets())
-          for (square to(mailbox[mailbox64[i] + delta]);
-               valid(to);
-               to = mailbox[mailbox64[to] + delta])
-          {
-            if (board_[to] != EMPTY)
-            {
-              if (board_[to].color() != side())
-                add(i, to, move::capture);
-              break;
-            }
-            if (!p.slide())
-              break;
-          }
-      }
-    }
-  }
-
-  add_en_passant(ret);
+  for_each_capture(add);
 
   return ret;
+}
+
+// Could be more efficient but reusing the `for_each_code` we try to avoid as
+// many bugs as possible.
+bool state::is_legal(const move &m) const
+{
+  bool found(false);
+
+  for_each_move(
+    [&](square from, square to, move::flags_t flags)
+    {
+      if (from == m.from && to == m.to && flags == m.flags)
+        found = true;
+    });
+
+  if (!found)
+    return false;
+
+  state s1(*this);
+  return s1.make_move(m);
 }
 
 bool state::attack(square target, color attacker) const
@@ -544,7 +578,7 @@ bool state::make_move(const move &m)
     hash_ ^= zobrist::castle[castle()];
 
   // ...en passant...
-  if (en_passant() != -1)
+  if (valid(en_passant()))
   {
     hash_ ^= zobrist::ep[file(en_passant())];
     ep_ = -1;

@@ -51,6 +51,9 @@ public:
   bool in_check(color) const;
   bool in_check() const { return in_check(side()); }
 
+  // Returns `true` if the argument is a legal move (flags must be correct).
+  bool is_legal(const move &) const;
+
   kind mate_or_draw(const std::vector<hash_t> * = nullptr) const;
 
   piece operator[](square s) const noexcept { return board_[s]; }
@@ -71,9 +74,12 @@ public:
 
 private:
   void add_m(movelist &, square, square, move::flags_t) const;
-  void add_pawn_m(movelist &, square, square, move::flags_t) const;
-  void add_pawn_captures(movelist &, square) const;
-  void add_en_passant(movelist &) const;
+  template<class F> void for_each_capture(F) const;
+  template<class F> void for_each_move(F) const;
+  template<class F> void process_en_passant(F) const;
+  template<class F> void process_pawn_captures(F, square) const;
+  template<class F> void process_pawn_m(F, square, square, move::flags_t) const;
+
   void clear_square(square);
   void fill_square(piece, square);
 

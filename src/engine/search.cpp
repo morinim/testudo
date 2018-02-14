@@ -19,6 +19,103 @@
 namespace testudo
 {
 
+// A convenient class to extract one move at time from the list of the legal
+// ones.
+class move_provider
+{
+public:
+  enum class stage {hash = 0, move_gen, others};
+
+  move_provider(const state &, const cache::slot *);
+
+  move next();
+  bool empty();
+
+private:
+  void move_gen();
+
+  const state                   &s_;
+  stage                      stage_;
+  move                  from_cache_;
+  movelist                   moves_;
+  movelist::const_iterator current_;
+};
+
+move_provider::move_provider(const state &s, const cache::slot *entry)
+  : s_(s), stage_(stage::hash), from_cache_(move::sentry()), moves_(),
+    current_()
+{
+  if (entry && !entry->best_move().is_sentry()
+      && s_.is_legal(entry->best_move()))
+    from_cache_ = entry->best_move();
+  else
+  {
+    move_gen();
+    stage_ = stage::others;
+  }
+}
+
+void move_provider::move_gen()
+{
+  const auto move_score(
+    [&](const move &m)
+    {
+      score ms(0);
+
+      // The best move is from the hash table. Sometimes we don't get a best
+      // move, like if everything failed low (returned a score <= alpha), but
+      // other times there is a definite best move, like when something fails
+      // high (returns a score >= beta).
+      // If a best move is found, it will be searched first.
+      if (m == from_cache_)
+        ms = 2000000;
+      else if (m.flags & move::capture)
+        ms = 20 * s_[m.to].value() - s_[m.from].value() + 1000000;
+
+      return ms;
+    });
+
+  moves_ = s_.moves();
+  std::sort(moves_.begin(), moves_.end(),
+            [&](const auto &m1, const auto &m2)
+            {
+              return move_score(m1) > move_score(m2);
+            });
+
+  current_ = moves_.begin();
+
+  if (!from_cache_.is_sentry())
+    ++current_;
+}
+
+bool move_provider::empty()
+{
+  if (!from_cache_.is_sentry())
+    return false;
+
+  return moves_.empty();
+}
+
+move move_provider::next()
+{
+  switch (stage_)
+  {
+  case stage::hash:
+    stage_ = stage::move_gen;
+    return from_cache_;
+
+  case stage::move_gen:
+    stage_ = stage::others;
+    move_gen();
+
+  default:
+    if (current_ == moves_.end())
+      return move::sentry();
+
+    return *current_++;
+  }
+}
+
 // Extraxt from the list of past known states (`ss`) a subset of hash values
 // used for repetition detection.
 search::path_info::path_info(const std::vector<state> &ss)
@@ -146,14 +243,11 @@ movelist search::sorted_moves(const state &s)
   return moves;
 }
 
-int search::delta_draft(bool in_check, unsigned n_moves, const move &m) const
+int search::delta_draft(bool in_check, const move &m) const
 {
   int delta(-PLY);
 
   if (in_check)
-    delta += 15*PLY/16;
-
-  if (n_moves == 1)
     delta += 15*PLY/16;
 
   if (m.flags & move::capture)
@@ -189,7 +283,7 @@ score search::alphabeta_root(const state &s, score alpha, score beta, int draft)
   auto best_move(move::sentry());
   for (std::size_t i(0); i < moves.size(); ++i)
   {
-    const auto new_draft(draft + delta_draft(in_check, moves.size(), moves[i]));
+    const auto new_draft(draft + delta_draft(in_check, moves[i]));
 
     const auto x(draft > PLY ? -alphabeta(s.after_move(moves[i]),
                                           -beta, -alpha, 1, new_draft)
@@ -283,7 +377,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
       ;
     }
 
-  const auto moves(sorted_moves(s));
+  move_provider moves(s, entry);
 
   const bool in_check(s.in_check());
 
@@ -294,9 +388,11 @@ score search::alphabeta(const state &s, score alpha, score beta,
     return 0;
 
   auto best_move(move::sentry());
-  for (const auto &m : moves)
+
+  move m(move::sentry());
+  while (!(m = moves.next()).is_sentry())
   {
-    const auto new_draft(draft + delta_draft(in_check, moves.size(), m));
+    const auto new_draft(draft + delta_draft(in_check, m));
 
     const auto x(draft > PLY ? -alphabeta(s.after_move(m), -beta, -alpha,
                                           ply + 1, new_draft)
