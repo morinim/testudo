@@ -156,6 +156,7 @@ bool parameters::load()
   return true;
 }
 
+// The general idea comes from Fruit.
 void parameters::pcsq_init()
 {
   using namespace detail;

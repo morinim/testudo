@@ -16,22 +16,21 @@ namespace testudo
 
 score eval(const state &s)
 {
-  score material[2] = {0, 0};
-  score pcsq_score[2] = {0, 0};
+  score_vector e;
 
   for (square i(0); i < 64; ++i)
     if (s[i] != EMPTY)
     {
-      material[s[i].color()] += s[i].value();
+      e.material[s[i].color()] += s[i].value();
 
-      if (material[!s[i].color()] > 1200)
-        pcsq_score[s[i].color()] += db.pcsq_m(s[i], i);
+      if (e.material[!s[i].color()] > 1200)
+        e.pcsq[s[i].color()] += db.pcsq_m(s[i], i);
       else
-        pcsq_score[s[i].color()] += db.pcsq_e(s[i], i);
+        e.pcsq[s[i].color()] += db.pcsq_e(s[i], i);
     }
 
-  return material[s.side()] - material[!s.side()]
-         + pcsq_score[s.side()] - pcsq_score[!s.side()];
+  return e.material[s.side()] - e.material[!s.side()]
+         + e.pcsq[s.side()] - e.pcsq[!s.side()];
 }
 
 }  // namespace testudo

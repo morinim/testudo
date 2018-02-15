@@ -62,10 +62,12 @@ public:
   auto fifty() const noexcept { return fifty_; }
   // En passant square.
   square en_passant() const noexcept { return ep_; }
-  // Side to move.
-  color side() const noexcept { return stm_; }
   // Castle rights.
   auto castle() const noexcept { return castle_; }
+  // Gets side to move.
+  color side() const noexcept { return stm_; }
+  // Changes side to move.
+  void switch_side() noexcept { stm_ = !stm_; }
 
   move parse_move(const std::string &) const;
 

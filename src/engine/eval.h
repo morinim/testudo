@@ -16,6 +16,12 @@
 namespace testudo
 {
 
+struct score_vector
+{
+  score material[2] = {0, 0};
+  score pcsq[2] = {0, 0};
+};
+
 extern score eval(const state &);
 
 }  // namespace testudo

@@ -318,8 +318,13 @@ TEST_CASE("state")
   const auto moves(start.moves());
   CHECK(moves.size() == 20);
 
-  const state start1(
+  state start1(
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -");
+  CHECK(start == start1);
+
+  start1.switch_side();
+  CHECK(start1.side() == BLACK);
+  start1.switch_side();
   CHECK(start == start1);
 }
 
@@ -457,7 +462,24 @@ TEST_CASE("hash_store_n_probe")
                });
 }
 
-TEST_CASE("search_with_no_move")
+// Verify that evaluation results are symmetrical between White and Black side
+TEST_CASE("eval_flip")
+{
+  for (const auto &test : test_set())
+    foreach_game(10, test.state,
+                 [](const state &pos, const move &)
+                 {
+                   const auto v(eval(pos));
+
+                   auto pos1(pos);
+                   pos1.switch_side();
+                   const auto v1(eval(pos1));
+
+                   CHECK(v == -v1);
+                 });
+}
+
+TEST_CASE("search_with_no_move_available")
 {
   const state p("8/8/8/5K1k/8/8/8/7R b - -");
 
