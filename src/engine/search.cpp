@@ -21,6 +21,10 @@ namespace testudo
 
 // A convenient class to extract one move at time from the list of the legal
 // ones.
+// We don't sort the whole move list, but perform a selection sort each time a
+// move is fetched.
+// Root node is an exception requiring additional effort to score and sort
+// moves.
 class move_provider
 {
 public:
@@ -32,18 +36,24 @@ public:
   bool empty();
 
 private:
+  static constexpr int SORT_CAPTURE = 100000;
+
   void move_gen();
 
-  const state                   &s_;
-  stage                      stage_;
-  move                  from_cache_;
-  movelist                   moves_;
-  movelist::const_iterator current_;
+  const state           &s_;
+  stage              stage_;
+  move          from_cache_;
+  movelist           moves_;
+  movelist::iterator start_;
 };
 
+constexpr int move_provider::SORT_CAPTURE;
+
+// If there is a legal move from the hash table (so we check `entry`), move
+// generation can be delayed: often the move is enough to cause a cutoff and
+// save time.
 move_provider::move_provider(const state &s, const cache::slot *entry)
-  : s_(s), stage_(stage::hash), from_cache_(move::sentry()), moves_(),
-    current_()
+  : s_(s), stage_(stage::hash), from_cache_(move::sentry()), moves_(), start_()
 {
   if (entry && !entry->best_move().is_sentry()
       && s_.is_legal(entry->best_move()))
@@ -57,35 +67,17 @@ move_provider::move_provider(const state &s, const cache::slot *entry)
 
 void move_provider::move_gen()
 {
-  const auto move_score(
-    [&](const move &m)
-    {
-      score ms(0);
-
-      // The best move is from the hash table. Sometimes we don't get a best
-      // move, like if everything failed low (returned a score <= alpha), but
-      // other times there is a definite best move, like when something fails
-      // high (returns a score >= beta).
-      // If a best move is found, it will be searched first.
-      if (m == from_cache_)
-        ms = 2000000;
-      else if (m.flags & move::capture)
-        ms = 20 * s_[m.to].value() - s_[m.from].value() + 1000000;
-
-      return ms;
-    });
-
   moves_ = s_.moves();
-  std::sort(moves_.begin(), moves_.end(),
-            [&](const auto &m1, const auto &m2)
-            {
-              return move_score(m1) > move_score(m2);
-            });
-
-  current_ = moves_.begin();
+  start_ = moves_.begin();
 
   if (!from_cache_.is_sentry())
-    ++current_;
+  {
+    auto where(std::find(start_, moves_.end(), from_cache_));
+    assert(where != moves_.end());
+
+    std::swap(*start_, *where);
+    ++start_;
+  }
 }
 
 bool move_provider::empty()
@@ -98,6 +90,20 @@ bool move_provider::empty()
 
 move move_provider::next()
 {
+  const auto move_score(
+    [&](const move &m)
+    {
+      // En passant gets a score lower than other PxP moves but are anyway
+      // searched in the groups of the capture moves.
+      if (m.flags & move::capture)
+        return (s_[m.to].value() << 8) - s_[m.from].value() + SORT_CAPTURE;
+
+      //if (m.flags & move::castle)
+      //  return 1;
+
+      return 0;
+    });
+
   switch (stage_)
   {
   case stage::hash:
@@ -109,10 +115,17 @@ move move_provider::next()
     move_gen();
 
   default:
-    if (current_ == moves_.end())
+    if (start_ == moves_.end())
       return move::sentry();
 
-    return *current_++;
+    auto max(std::max_element(start_, moves_.end(),
+                              [&](const auto &a, const auto &b)
+                              {
+                                return move_score(a) < move_score(b);
+                              }));
+    std::swap(*max, *start_);
+
+    return *start_++;
   }
 }
 
