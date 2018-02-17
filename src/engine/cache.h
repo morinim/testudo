@@ -51,8 +51,8 @@ public:
                    std::uint8_t a = 0) noexcept
     : hash_(h), best_move_(m), draft_(d), value_(v), type_(t), age_(a)
     {
-      assert(std::numeric_limits<decltype(value)>::min() <= v);
-      assert(v <= std::numeric_limits<decltype(value)>::max());
+      assert(std::numeric_limits<decltype(value_)>::min() <= v);
+      assert(v <= std::numeric_limits<decltype(value_)>::max());
     }
 
     constexpr void save(hash_t, move, int, score_type, score,

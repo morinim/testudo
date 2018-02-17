@@ -21,8 +21,8 @@ namespace testudo
 inline constexpr void cache::slot::save(hash_t h, move m, int d, score_type t,
                                         score v, std::uint8_t a) noexcept
 {
-  assert(std::numeric_limits<decltype(value)>::min() <= v);
-  assert(v <= std::numeric_limits<decltype(value)>::max());
+  assert(std::numeric_limits<decltype(value_)>::min() <= v);
+  assert(v <= std::numeric_limits<decltype(value_)>::max());
 
   // Preserve any existing move for the same position.
   if (!m.is_sentry() || hash_ != h)
