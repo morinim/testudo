@@ -106,28 +106,28 @@ void cache::insert(hash_t h, const move &m, int draft, score_type t,
   // > tree they are found.  When stored in the hash table, additional
   // > weirdness can result. This problem can be solved by converting any mate
   // > scores to bounds, then storing the bounds.
-  // > A few weird cases were mates that are failing low, and -MATES that are
+  // > A few weird cases were mates that are failing low, and "-mates" that are
   // > failing high. These are stored without any bound information, so it's
   // > not possible to cut off on these later.
   // (Bruce Moreland)
-  if (v >= MATE - 500)
+  if (v >= MATE)
   {
     if (t == score_type::fail_low)  // failing low on MATE
       t = score_type::ignore;       // don't allow a cutoff later
     else
     {
       t = score_type::fail_high;    // exact/fail-high, turned into a fail-high
-      v = MATE - 500;
+      v = MATE;
     }
   }
-  else if (v <= -MATE + 500)
+  else if (v <= -MATE)
   {
     if (t == score_type::fail_high) // fail high on -MATE
       t = score_type::ignore;       // dont't allow cutoff later
     else
     {
       t = score_type::fail_low;     // exact/fail-low, turned into a fail-low
-      v = -MATE + 500;
+      v = -MATE;
     }
   }
 

@@ -395,7 +395,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
   const bool in_check(s.in_check());
 
   if (moves.empty())
-    return in_check ? -MATE + ply : 0;
+    return in_check ? -INF + ply : 0;
 
   if (path_info_.repetitions() || s.fifty() >= 100)
     return 0;

@@ -47,7 +47,7 @@ public:
   {
   public:
     constexpr slot(hash_t h = 0, move m = move::sentry(), int d = 0,
-                   score_type t = score_type::fail_low, score v = -INF,
+                   score_type t = score_type::ignore, score v = 0,
                    std::uint8_t a = 0) noexcept
     : hash_(h), best_move_(m), draft_(d), value_(v), type_(t), age_(a)
     {
