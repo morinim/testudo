@@ -364,18 +364,6 @@ void state::process_castles(F f) const
   }
 }
 
-template<class F>
-void state::for_each_move(F f) const
-{
-  for (square i(0); i < 64; ++i)
-    if (board_[i] != EMPTY && board_[i].color() == side())
-      process_piece_moves(f, i);
-
-  process_castles(f);
-
-  process_en_passant(f);
-}
-
 movelist state::moves() const
 {
   // The maximum number of moves per positions seems to be 218 but you can
@@ -388,43 +376,15 @@ movelist state::moves() const
                    state::add_m(ret, from, to, flags);
                  });
 
-  for_each_move(add);
+  for (square i(0); i < 64; ++i)
+    if (board_[i] != EMPTY && board_[i].color() == side())
+      process_piece_moves(add, i);
+
+  process_castles(add);
+
+  process_en_passant(add);
 
   return ret;
-}
-
-template<class F>
-void state::for_each_capture(F f) const
-{
-  for (square i(0); i < 64; ++i)
-  {
-    const piece p(board_[i]);
-
-    if (p != EMPTY && p.color() == side())
-    {
-      if (p.type() == piece::pawn)
-        process_pawn_captures(f, i);
-      else
-      {
-        for (auto delta : p.offsets())
-          for (square to(mailbox[mailbox64[i] + delta]);
-               valid(to);
-               to = mailbox[mailbox64[to] + delta])
-          {
-            if (board_[to] != EMPTY)
-            {
-              if (board_[to].color() != side())
-                f(i, to, move::capture);
-              break;
-            }
-            if (!p.slide())
-              break;
-          }
-      }
-    }
-  }
-
-  process_en_passant(f);
 }
 
 // Basically a copy of `state::moves()`, just modified to generate only
@@ -440,7 +400,35 @@ movelist state::captures() const
                    state::add_m(ret, from, to, flags);
                  });
 
-  for_each_capture(add);
+  for (square i(0); i < 64; ++i)
+  {
+    const piece p(board_[i]);
+
+    if (p != EMPTY && p.color() == side())
+    {
+      if (p.type() == piece::pawn)
+        process_pawn_captures(add, i);
+      else
+      {
+        for (auto delta : p.offsets())
+          for (square to(mailbox[mailbox64[i] + delta]);
+               valid(to);
+               to = mailbox[mailbox64[to] + delta])
+          {
+            if (board_[to] != EMPTY)
+            {
+              if (board_[to].color() != side())
+                add(i, to, move::capture);
+              break;
+            }
+            if (!p.slide())
+              break;
+          }
+      }
+    }
+  }
+
+  process_en_passant(add);
 
   return ret;
 }
@@ -473,26 +461,6 @@ bool state::is_legal(const move &m) const
 
   state s1(*this);
   return s1.make_move(m);
-
-/*
-  process_piece_moves(find, m.from);
-
-  if (!found)
-  {
-    process_castles(find);
-
-    if (!found)
-    {
-      process_en_passant(find);
-
-      if (!found)
-        return false;
-    }
-  }
-
-  state s1(*this);
-  return s1.make_move(m);
-*/
 }
 
 bool state::attack(square target, color attacker) const
