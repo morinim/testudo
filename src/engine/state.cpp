@@ -306,7 +306,7 @@ void state::for_each_move(F f) const
     {
       process_pawn_m(f, i, to, move::pawn);
 
-      if (rank(i) == pawn_base_rank(side()))
+      if (rank(i) == second_rank(side()))
       {
         to += pawn_fwd[side()];
         if (board_[to] == EMPTY)

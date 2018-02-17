@@ -202,6 +202,16 @@ TEST_CASE("square")
   CHECK(valid(G8));
   CHECK(valid(H8));
   CHECK(!valid(-1));
+
+  CHECK(first_rank(BLACK) == rank(A8));
+  CHECK(first_rank(WHITE) == rank(A1));
+  CHECK(second_rank(BLACK) == rank(A7));
+  CHECK(second_rank(WHITE) == rank(A2));
+  CHECK(seventh_rank(BLACK) == rank(A2));
+  CHECK(seventh_rank(WHITE) == rank(A7));
+  CHECK(eighth_rank(BLACK) == rank(A1));
+  CHECK(eighth_rank(WHITE) == rank(A8));
+
 }
 
 TEST_CASE("piece")
