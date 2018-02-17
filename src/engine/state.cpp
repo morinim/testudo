@@ -469,7 +469,7 @@ bool state::attack(square target, color attacker) const
   {
     const piece p(board_[i]);
 
-    if (p.color() == attacker)
+    if (p != EMPTY && p.color() == attacker)
     {
       if (p.type() == piece::pawn)
       {
