@@ -271,6 +271,8 @@ void state::process_pawn_m(F f, square from, square to,
 template<class F>
 void state::process_pawn_captures(F f, square i) const
 {
+  assert(board_[i] == piece(side(), piece::pawn));
+
   for (auto delta : pawn_capture[side()])
   {
     const auto to(mailbox[mailbox64[i] + delta]);
@@ -295,9 +297,14 @@ void state::process_en_passant(F f) const
 }
 
 template<class F>
-void state::for_each_move(F f) const
+void state::process_piece_moves(F f, square i) const
 {
-  const auto process_pawn_moves([&](square i) -> void
+  assert(board_[i] != EMPTY);
+  assert(board_[i].color() == side());
+
+  const piece p(board_[i]);
+
+  if (p.type() == piece::pawn)
   {
     process_pawn_captures(f, i);
 
@@ -313,38 +320,30 @@ void state::for_each_move(F f) const
           process_pawn_m(f, i, to, move::pawn|move::two_squares);
       }
     }
-  });
-
-  for (square i(0); i < 64; ++i)
-  {
-    const piece p(board_[i]);
-
-    if (p != EMPTY && p.color() == side())
-    {
-      if (p.type() == piece::pawn)
-        process_pawn_moves(i);
-      else
-      {
-        for (auto delta : p.offsets())
-          for (square to(mailbox[mailbox64[i] + delta]);
-               valid(to);
-               to = mailbox[mailbox64[to] + delta])
-          {
-            if (board_[to] != EMPTY)
-            {
-              if (board_[to].color() != side())
-                f(i, to, move::capture);
-              break;
-            }
-            f(i, to, 0);
-            if (!p.slide())
-              break;
-          }
-      }
-    }
   }
+  else  // not a pawn
+  {
+    for (auto delta : p.offsets())
+      for (square to(mailbox[mailbox64[i] + delta]);
+           valid(to);
+           to = mailbox[mailbox64[to] + delta])
+      {
+        if (board_[to] != EMPTY)
+        {
+          if (board_[to].color() != side())
+            f(i, to, move::capture);
+          break;
+        }
+        f(i, to, 0);
+        if (!p.slide())
+          break;
+      }
+  }
+}
 
-  // Castle moves.
+template<class F>
+void state::process_castles(F f) const
+{
   if (side() == WHITE)
   {
     if ((castle() & white_kingside)
@@ -363,6 +362,16 @@ void state::for_each_move(F f) const
         && board_[B8] == EMPTY && board_[C8] == EMPTY && board_[D8] == EMPTY)
       f(E8, C8, move::castle);
   }
+}
+
+template<class F>
+void state::for_each_move(F f) const
+{
+  for (square i(0); i < 64; ++i)
+    if (board_[i] != EMPTY && board_[i].color() == side())
+      process_piece_moves(f, i);
+
+  process_castles(f);
 
   process_en_passant(f);
 }
@@ -436,24 +445,54 @@ movelist state::captures() const
   return ret;
 }
 
-// Could be more efficient but reusing the `for_each_code` we try to avoid as
+// Could be more efficient but reusing the `process_*` code we try to avoid as
 // many bugs as possible.
 bool state::is_legal(const move &m) const
 {
-  bool found(false);
+  assert(valid(m.from) && valid(m.to));
 
-  for_each_move(
-    [&](square from, square to, move::flags_t flags)
-    {
-      if (from == m.from && to == m.to && flags == m.flags)
-        found = true;
-    });
+  if (board_[m.from] == EMPTY || board_[m.from].color() != side())
+    return false;
+
+  bool found(false);
+  const auto find([&](square from, square to, move::flags_t flags)
+                  {
+                    if (from == m.from && to == m.to && flags == m.flags)
+                      found = true;
+                  });
+
+  if ( !(m.flags & (move::en_passant|move::castle)) )
+    process_piece_moves(find, m.from);
+  else if (m.flags & move::castle)
+    process_castles(find);
+  else
+    process_en_passant(find);
 
   if (!found)
     return false;
 
   state s1(*this);
   return s1.make_move(m);
+
+/*
+  process_piece_moves(find, m.from);
+
+  if (!found)
+  {
+    process_castles(find);
+
+    if (!found)
+    {
+      process_en_passant(find);
+
+      if (!found)
+        return false;
+    }
+  }
+
+  state s1(*this);
+  return s1.make_move(m);
+*/
 }
 
 bool state::attack(square target, color attacker) const

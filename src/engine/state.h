@@ -78,9 +78,11 @@ private:
   void add_m(movelist &, square, square, move::flags_t) const;
   template<class F> void for_each_capture(F) const;
   template<class F> void for_each_move(F) const;
+  template<class F> void process_castles(F) const;
   template<class F> void process_en_passant(F) const;
   template<class F> void process_pawn_captures(F, square) const;
   template<class F> void process_pawn_m(F, square, square, move::flags_t) const;
+  template<class F> void process_piece_moves(F, square) const;
 
   void clear_square(square);
   void fill_square(piece, square);

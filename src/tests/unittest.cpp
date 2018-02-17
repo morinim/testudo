@@ -404,8 +404,6 @@ TEST_CASE("is_legal")
                    m1.flags ^= (1 << i);
                    CHECK(!pos.is_legal(m1));
                  }
-
-                 CHECK(!pos.is_legal(move::sentry()));
                });
 }
 
