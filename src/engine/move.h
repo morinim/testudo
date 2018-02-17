@@ -23,8 +23,7 @@ struct move
   enum
   {
     capture = 1, castle = 2, en_passant = 4, two_squares = 8, pawn = 16,
-    promotion_n = 32, promotion_b = 64, promotion_r = 128, promotion_q = 256,
-    promotion = promotion_n|promotion_b|promotion_r|promotion_q
+    promotion_n = 32, promotion_b = 64, promotion_r = 128, promotion_q = 256
   };
 
   constexpr move(square from_sq, square to_sq, flags_t move_flags) noexcept
@@ -65,6 +64,18 @@ inline constexpr enum piece::type move::promote() const noexcept
     flags & promotion_r ?   piece::rook :
     flags & promotion_b ? piece::bishop :
     flags & promotion_n ? piece::knight : piece::empty;
+}
+
+inline constexpr bool is_capture(const move &m) noexcept
+{
+  return m.flags & move::capture;
+}
+
+inline constexpr bool is_promotion(const move &m) noexcept
+{
+  return m.flags
+         & (move::promotion_n|move::promotion_b
+            |move::promotion_r|move::promotion_q);
 }
 
 // Move in coordinate notation (g1f3, a7a8q).

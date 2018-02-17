@@ -95,7 +95,7 @@ move move_provider::next()
     {
       // En passant gets a score lower than other PxP moves but are anyway
       // searched in the groups of the capture moves.
-      if (m.flags & move::capture)
+      if (is_capture(m))
         return (s_[m.to].value() << 8) - s_[m.from].value() + SORT_CAPTURE;
 
       //if (m.flags & move::castle)
@@ -240,7 +240,7 @@ movelist search::sorted_moves(const state &s)
       // If a best move is found, it will be searched first.
       if (m == best_move)
         ms = 2000000;
-      else if (m.flags & move::capture)
+      else if (is_capture(m))
         ms = 20 * s[m.to].value() - s[m.from].value() + 1000000;
 
       return ms;
@@ -263,7 +263,7 @@ int search::delta_draft(bool in_check, const move &m) const
   if (in_check)
     delta += 15*PLY/16;
 
-  if (m.flags & move::capture)
+  if (is_capture(m))
     delta += PLY / 2;
 
   return std::min(0, delta);

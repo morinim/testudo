@@ -345,7 +345,7 @@ TEST_CASE("move")
 
   for (const auto &m : s.moves())
   {
-    if (m.flags & move::capture)
+    if (is_capture(m))
     {
       CHECK(!(m.flags & move::castle));
       CHECK(!(m.flags & move::two_squares));
@@ -356,20 +356,20 @@ TEST_CASE("move")
       CHECK(!(m.flags & move::en_passant));
       CHECK(!(m.flags & move::two_squares));
       CHECK(!(m.flags & move::pawn));
-      CHECK(!(m.flags & move::promotion));
+      CHECK(!is_promotion(m));
     }
 
     if (m.flags & move::en_passant)
     {
-      CHECK((m.flags & move::capture));
+      CHECK(is_capture(m));
       CHECK(!(m.flags & move::two_squares));
       CHECK((m.flags & move::pawn));
-      CHECK(!(m.flags & move::promotion));
+      CHECK(!is_promotion(m));
     }
 
     if (m.flags & move::two_squares)
     {
-      CHECK(!(m.flags & move::promotion));
+      CHECK(!is_promotion(m));
     }
 
     CHECK(!m.is_sentry());

@@ -606,7 +606,7 @@ bool state::make_move(const move &m)
   if (board_[m.to] != EMPTY)  // capture:
     clear_square(m.to);       // clears the destination square
 
-  const piece p(m.flags & move::promotion
+  const piece p(is_promotion(m)
                 ? piece(side(), m.promote())
                 : board_[m.from]);
   fill_square(p, m.to);

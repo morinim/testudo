@@ -25,7 +25,7 @@ std::ostream &operator<<(std::ostream &o, const move &m)
   ss << char('a' + file(m.from)) << 1 + rank(m.from)
      << char('a' + file(m.to)) << 1 + rank(m.to);
 
-  if (m.flags & move::promotion)
+  if (is_promotion(m))
     ss << piece(BLACK, m.promote());
 
   return o << ss.str();
