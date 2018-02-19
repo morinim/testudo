@@ -121,33 +121,31 @@ std::ostream &operator<<(std::ostream &o, const state &s)
 state::state(setup t) noexcept
   : stm_(WHITE),
     castle_(white_kingside|white_queenside|black_kingside|black_queenside),
-    ep_(-1), fifty_(0), king_(), hash_()
+    ep_(-1), fifty_(0), king_{-1, -1}, hash_(0)
 {
-  static const std::array<piece, 64> init_piece(
-  {{
-    BROOK, BKNIGHT, BBISHOP, BQUEEN, BKING, BBISHOP, BKNIGHT, BROOK,
-    BPAWN,   BPAWN,   BPAWN,  BPAWN, BPAWN,   BPAWN,   BPAWN, BPAWN,
-    EMPTY,   EMPTY,   EMPTY,  EMPTY, EMPTY,   EMPTY,   EMPTY, EMPTY,
-    EMPTY,   EMPTY,   EMPTY,  EMPTY, EMPTY,   EMPTY,   EMPTY, EMPTY,
-    EMPTY,   EMPTY,   EMPTY,  EMPTY, EMPTY,   EMPTY,   EMPTY, EMPTY,
-    EMPTY,   EMPTY,   EMPTY,  EMPTY, EMPTY,   EMPTY,   EMPTY, EMPTY,
-    WPAWN,   WPAWN,   WPAWN,  WPAWN, WPAWN,   WPAWN,   WPAWN, WPAWN,
-    WROOK, WKNIGHT, WBISHOP, WQUEEN, WKING, WBISHOP, WKNIGHT, WROOK
-  }});
+  std::fill(board_.begin(), board_.end(), EMPTY);
 
   if (t == setup::start)
   {
-    board_ = init_piece;
-    king_[BLACK] = E8;
-    king_[WHITE] = E1;
-  }
-  else
-  {
-    std::fill(board_.begin(), board_.end(), EMPTY);
-    king_[BLACK] = -1;
-    king_[WHITE] = -1;
+    static const std::array<piece, 64> init_piece(
+    {{
+      BROOK, BKNIGHT, BBISHOP, BQUEEN, BKING, BBISHOP, BKNIGHT, BROOK,
+      BPAWN,   BPAWN,   BPAWN,  BPAWN, BPAWN,   BPAWN,   BPAWN, BPAWN,
+      EMPTY,   EMPTY,   EMPTY,  EMPTY, EMPTY,   EMPTY,   EMPTY, EMPTY,
+      EMPTY,   EMPTY,   EMPTY,  EMPTY, EMPTY,   EMPTY,   EMPTY, EMPTY,
+      EMPTY,   EMPTY,   EMPTY,  EMPTY, EMPTY,   EMPTY,   EMPTY, EMPTY,
+      EMPTY,   EMPTY,   EMPTY,  EMPTY, EMPTY,   EMPTY,   EMPTY, EMPTY,
+      WPAWN,   WPAWN,   WPAWN,  WPAWN, WPAWN,   WPAWN,   WPAWN, WPAWN,
+      WROOK, WKNIGHT, WBISHOP, WQUEEN, WKING, WBISHOP, WKNIGHT, WROOK
+    }});
+
+    for (square i(0); i < 64; ++i)
+      if (init_piece[i] != EMPTY)
+        fill_square(init_piece[i], i);
   }
 
+  // Fill square has already placed the pieces, but we need to embed into the
+  // hash key other state information hence the call to `zobrist::hash`.
   hash_ = zobrist::hash(*this);
 }
 
@@ -177,18 +175,18 @@ state::state(const std::string &a_fen) : state(setup::empty)
 
     switch (l)
     {
-    case 'p': board_[i] =   BPAWN; break;
-    case 'n': board_[i] = BKNIGHT; break;
-    case 'b': board_[i] = BBISHOP; break;
-    case 'r': board_[i] =   BROOK; break;
-    case 'q': board_[i] =  BQUEEN; break;
-    case 'k': board_[i] =   BKING; king_[BLACK] = i; break;
-    case 'P': board_[i] =   WPAWN; break;
-    case 'N': board_[i] = WKNIGHT; break;
-    case 'B': board_[i] = WBISHOP; break;
-    case 'R': board_[i] =   WROOK; break;
-    case 'Q': board_[i] =  WQUEEN; break;
-    case 'K': board_[i] =   WKING; king_[WHITE] = i; break;
+    case 'p': fill_square(  BPAWN, i); break;
+    case 'n': fill_square(BKNIGHT, i); break;
+    case 'b': fill_square(BBISHOP, i); break;
+    case 'r': fill_square(  BROOK, i); break;
+    case 'q': fill_square( BQUEEN, i); break;
+    case 'k': fill_square(  BKING, i); break;
+    case 'P': fill_square(  WPAWN, i); break;
+    case 'N': fill_square(WKNIGHT, i); break;
+    case 'B': fill_square(WBISHOP, i); break;
+    case 'R': fill_square(  WROOK, i); break;
+    case 'Q': fill_square( WQUEEN, i); break;
+    case 'K': fill_square(  WKING, i); break;
     case '/': continue;
     case '1':
     case '2':
@@ -505,6 +503,7 @@ bool state::in_check(color c) const
 // updated stuff: hash keys, piece counters...
 void state::clear_square(square i)
 {
+  assert(valid(i));
   const piece p(board_[i]);
   assert(p != EMPTY);
 
@@ -516,6 +515,8 @@ void state::clear_square(square i)
 // updated stuff: hash keys, piece counters, king location...
 void state::fill_square(piece p, square i)
 {
+  assert(p != EMPTY);
+  assert(valid(i));
   assert(board_[i] == EMPTY);
 
   hash_ ^= zobrist::piece[p.id()][i];
