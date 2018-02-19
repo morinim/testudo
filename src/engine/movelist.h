@@ -11,6 +11,8 @@
 #if !defined(TESTUDO_MOVELIST_H)
 #define      TESTUDO_MOVELIST_H
 
+#include <vector>
+
 #include "move.h"
 
 namespace testudo

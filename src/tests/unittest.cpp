@@ -216,7 +216,8 @@ TEST_CASE("square")
 
 TEST_CASE("piece")
 {
-  CHECK(!EMPTY.id());
+  CHECK(EMPTY.color() != BLACK);
+  CHECK(EMPTY.color() != WHITE);
 
   CHECK(  !BPAWN.slide());
   CHECK(  !WPAWN.slide());
@@ -257,12 +258,12 @@ TEST_CASE("piece")
   CHECK(WQUEEN.color()  == WHITE);
   CHECK(WKING.color()   == WHITE);
 
-  CHECK(BPAWN.type() == WPAWN.type());
+  CHECK(BPAWN.type()   == WPAWN.type());
   CHECK(BKNIGHT.type() == WKNIGHT.type());
   CHECK(BBISHOP.type() == WBISHOP.type());
-  CHECK(BROOK.type() == WROOK.type());
-  CHECK(BQUEEN.type() == WQUEEN.type());
-  CHECK(BKING.type() == WKING.type());
+  CHECK(BROOK.type()   == WROOK.type());
+  CHECK(BQUEEN.type()  == WQUEEN.type());
+  CHECK(BKING.type()   == WKING.type());
 
   CHECK(BPAWN.letter()   == 'p');
   CHECK(BKNIGHT.letter() == 'n');

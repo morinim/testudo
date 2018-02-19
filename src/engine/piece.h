@@ -12,10 +12,10 @@
 #define      TESTUDO_PIECE_H
 
 #include <array>
+#include <cassert>
 #include <iostream>
 
 #include "color.h"
-#include "random.h"
 #include "score.h"
 #include "square.h"
 
@@ -25,18 +25,22 @@ namespace testudo
 class piece
 {
 public:
-  enum type {empty = 0, pawn, king, knight, bishop, rook, queen};
+  enum type {pawn = 0, king, knight, bishop, rook, queen, empty};
 
   using ID = std::uint8_t;
   static constexpr ID sup_id = 14;
 
   explicit constexpr piece(ID i = 0) noexcept : id_(i) {}
-  constexpr piece(testudo::color c, unsigned t) noexcept : piece(2 * t + c) {}
+  constexpr piece(testudo::color c, unsigned t) noexcept : piece(c << 3 | t)
+  {
+    assert(t != empty);
+  }
 
   constexpr ID id() const noexcept { return id_; }
 
-  // Color of the piece (i.e. `BPAWN.color() == BLACK`).
-  constexpr testudo::color color() const noexcept;
+  // Color of the piece (i.e. `BPAWN.color() == BLACK`. `EMPTY.color() differs
+  // from `WHITE` and `BLACK`)
+  constexpr std::uint8_t color() const noexcept;
 
   // Piece type (i.e. `BPAWN.type() == type::pawn`).
   constexpr enum type type() const noexcept;
@@ -54,62 +58,99 @@ public:
 private:
   static constexpr std::initializer_list<int> offsets_[sup_id] =
   {
-    {}, {},
-    {}, {},
-    {-11, -10,  -9, -1, 1,  9, 10, 11},
+    {},
     {-11, -10,  -9, -1, 1,  9, 10, 11},
     {-21, -19, -12, -8, 8, 12, 19, 21},
+    {-11,  -9,   9, 11},
+    {-10,  -1,   1, 10},
+    {-11, -10,  -9, -1, 1,  9, 10, 11},
+
+    {}, {},  // unused slots
+
+    {},
+    {-11, -10,  -9, -1, 1,  9, 10, 11},
     {-21, -19, -12, -8, 8, 12, 19, 21},
     {-11,  -9,   9, 11},
-    {-11,  -9,   9, 11},
     {-10,  -1,   1, 10},
-    {-10,  -1,   1, 10},
-    {-11, -10,  -9, -1, 1,  9, 10, 11},
-    {-11, -10,  -9, -1, 1,  9, 10, 11},
+    {-11, -10,  -9, -1, 1,  9, 10, 11}
   };
 
-  static constexpr score value_[sup_id] = {0, 100, 2000, 345, 355, 525, 1000};
+  static constexpr score value_[empty+1] = {100, 2000, 345, 355, 525, 1000, 0};
 
   ID id_;
 };
 
-// Piece with *type+color* encondig. The general sequence is:
-//     (type << 1) | color
+// Piece with *color+type* encondig. The general sequence is:
+//     color << 3 | type
 // `type` (3 bits) is assigned so that:
-// - the most significant bit is set for sliding pieces;
-// - pieces a Pawn can be promoted to have `type() > 2`.
-constexpr piece   EMPTY(0b0000);
-//        piece  UNUSED(0b0001);
-constexpr piece   BPAWN(0b0010);
-constexpr piece   WPAWN(0b0011);
-constexpr piece   BKING(0b0100);
-constexpr piece   WKING(0b0101);
-constexpr piece BKNIGHT(0b0110);
-constexpr piece WKNIGHT(0b0111);
-constexpr piece BBISHOP(0b1000);
-constexpr piece WBISHOP(0b1001);
-constexpr piece   BROOK(0b1010);
-constexpr piece   WROOK(0b1011);
-constexpr piece  BQUEEN(0b1100);
-constexpr piece  WQUEEN(0b1101);
+// - not sliding pieces have `type() > 2`;
+// - pieces a Pawn can be promoted to have `type() > 1`.
+constexpr piece   BPAWN(0b00000);
+constexpr piece   BKING(0b00001);
+constexpr piece BKNIGHT(0b00010);
+constexpr piece BBISHOP(0b00011);
+constexpr piece   BROOK(0b00100);
+constexpr piece  BQUEEN(0b00101);
+//        piece  UNUSED(0b00110);
+//        piece  UNUSED(0b00111);
+constexpr piece   WPAWN(0b01000);
+constexpr piece   WKING(0b01001);
+constexpr piece WKNIGHT(0b01010);
+constexpr piece WBISHOP(0b01011);
+constexpr piece   WROOK(0b01100);
+constexpr piece  WQUEEN(0b01101);
+//
+constexpr piece   EMPTY(0b10110);
 
-inline constexpr testudo::color piece::color() const noexcept
+inline constexpr bool operator==(piece lhs, piece rhs)
 {
-  return id() & 1;
+  return lhs.id() == rhs.id();
+}
+inline constexpr bool operator!=(piece lhs, piece rhs)
+{
+  return !(lhs == rhs);
+}
+
+// The return value of this function is a `std::uint8_t` (and not a `color`).
+// This is wanted and very useful since a third value (not equal to 'BLACK'
+// or 'WHITE') is used to mark empty squares.
+// To identify enemy pieces we can write:
+//
+//     if (board_[i].color() == !side()) ...
+//
+// instead of
+//
+//     if (board_[i] != EMPTY && board_[i].color() != side()) ...
+//
+// which is faster. Anyway consider that:
+//
+//    if (board_[i].color() == !side()) ...
+//
+// and
+//
+//    if (board_[i].color() != side()) ...
+//
+// are NOT equivalent. The first expression checks if the `i`th square contains
+// an enemy piece, the second one if it contains an enemy piece or is empty.
+inline constexpr std::uint8_t piece::color() const noexcept
+{
+  return id() >> 3;
 }
 
 inline constexpr enum piece::type piece::type() const noexcept
 {
-  return static_cast<enum type>(id() >> 1);
+  return static_cast<enum type>(id() & 0b00111);
 }
 
 inline constexpr bool piece::slide() const noexcept
 {
-  return id() & 0b1000;
+  assert(*this != EMPTY);
+  return type() > 2;
 }
 
 inline constexpr const auto &piece::offsets() const noexcept
 {
+  assert(*this != EMPTY);
   return offsets_[id()];
 }
 
@@ -120,21 +161,12 @@ inline constexpr score piece::value() const noexcept
 
 inline constexpr char piece::letter() const noexcept
 {
+  assert(*this != EMPTY);
   constexpr char letter_[sup_id] =
   {
-    '1', '?',
-    'p', 'P', 'k', 'K', 'n', 'N', 'b', 'B', 'r', 'R', 'q', 'Q'
+    'p', 'k', 'n', 'b', 'r', 'q', '?', '?', 'P', 'K', 'N', 'B', 'R', 'Q'
   };
   return letter_[id()];
-}
-
-inline constexpr bool operator==(piece lhs, piece rhs)
-{
-  return lhs.id() == rhs.id();
-}
-inline constexpr bool operator!=(piece lhs, piece rhs)
-{
-  return !(lhs == rhs);
 }
 
 inline std::ostream &operator<<(std::ostream &o, piece p)

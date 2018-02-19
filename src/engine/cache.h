@@ -11,6 +11,8 @@
 #if !defined(TESTUDO_CACHE_H)
 #define      TESTUDO_CACHE_H
 
+#include <vector>
+
 #include "move.h"
 #include "zobrist.h"
 

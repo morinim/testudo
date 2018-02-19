@@ -14,6 +14,6 @@ namespace testudo
 {
 
 constexpr std::initializer_list<int> piece::offsets_[piece::sup_id];
-constexpr score piece::value_[piece::sup_id];
+constexpr score piece::value_[piece::empty + 1];
 
 }  // namespace testudo

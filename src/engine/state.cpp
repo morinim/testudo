@@ -277,7 +277,7 @@ void state::process_pawn_captures(F f, square i) const
   {
     const auto to(mailbox[mailbox64[i] + delta]);
 
-    if (valid(to) && board_[to] != EMPTY && board_[to].color() != side())
+    if (valid(to) && board_[to].color() == !side())
       process_pawn_m(f, i, to, move::pawn|move::capture);
   }
 }
@@ -285,21 +285,19 @@ void state::process_pawn_captures(F f, square i) const
 template<class F>
 void state::process_en_passant(F f) const
 {
-  if (valid(ep_))
+  if (valid(en_passant()))
     for (auto delta : pawn_capture[side()])
     {
       const auto from(mailbox[mailbox64[ep_] - delta]);
 
-      if (valid(from) && board_[from].color() == side()
-          && board_[from].type() == piece::pawn)
-        f(from, ep_, move::pawn|move::capture|move::en_passant);
+      if (valid(from) && board_[from] == piece(side(), piece::pawn))
+        f(from, en_passant(), move::pawn|move::capture|move::en_passant);
     }
 }
 
 template<class F>
 void state::process_piece_moves(F f, square i) const
 {
-  assert(board_[i] != EMPTY);
   assert(board_[i].color() == side());
 
   const piece p(board_[i]);
@@ -330,7 +328,7 @@ void state::process_piece_moves(F f, square i) const
       {
         if (board_[to] != EMPTY)
         {
-          if (board_[to].color() != side())
+          if (board_[to].color() == !side())
             f(i, to, move::capture);
           break;
         }
@@ -377,7 +375,7 @@ movelist state::moves() const
                  });
 
   for (square i(0); i < 64; ++i)
-    if (board_[i] != EMPTY && board_[i].color() == side())
+    if (board_[i].color() == side())
       process_piece_moves(add, i);
 
   process_castles(add);
@@ -404,7 +402,7 @@ movelist state::captures() const
   {
     const piece p(board_[i]);
 
-    if (p != EMPTY && p.color() == side())
+    if (p.color() == side())
     {
       if (p.type() == piece::pawn)
         process_pawn_captures(add, i);
@@ -417,7 +415,7 @@ movelist state::captures() const
           {
             if (board_[to] != EMPTY)
             {
-              if (board_[to].color() != side())
+              if (board_[to].color() == !side())
                 add(i, to, move::capture);
               break;
             }
@@ -439,7 +437,7 @@ bool state::is_legal(const move &m) const
 {
   assert(valid(m.from) && valid(m.to));
 
-  if (board_[m.from] == EMPTY || board_[m.from].color() != side())
+  if (board_[m.from].color() != side())
     return false;
 
   bool found(false);
@@ -469,7 +467,7 @@ bool state::attack(square target, color attacker) const
   {
     const piece p(board_[i]);
 
-    if (p != EMPTY && p.color() == attacker)
+    if (p.color() == attacker)
     {
       if (p.type() == piece::pawn)
       {
@@ -652,7 +650,7 @@ state::kind state::mate_or_draw(const std::vector<hash_t> *history) const
   return kind::standard;
 }
 
-// parses the move `s` (in coordinate notation) and returns the move converted
+// Parses the move `s` (in coordinate notation) and returns the move converted
 // in the internal notation.
 move state::parse_move(const std::string &s) const
 {
