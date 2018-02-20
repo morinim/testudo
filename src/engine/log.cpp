@@ -33,26 +33,20 @@ std::tm tm_now()
 log::level log::reporting_level = log::ALL;
 std::unique_ptr<std::ostream> log::stream = nullptr;
 
-///
-/// Creates a `log` object.
-///
+// Creates a `log` object.
 log::log() : os(), level_(INFO) {}
 
-///
-/// Sets the logging level of a message.
-///
-/// \param[in] l logging level of the following message
-///
-/// The following code:
-///
-///     log().get(level) << "Hello " << username;
-///
-/// creates a `log` object with the `level` logging level, fetches its
-/// `std::stringstream` object, formats and accumulates the user-supplied data
-/// and, finally:
-/// - prints the resulting string on `std::cout`;
-/// - persists the resulting string into the log file (if specified).
-///
+// Sets the logging level of a message.
+//
+// The following code:
+//
+//     log().get(level) << "Hello " << username;
+//
+// creates a `log` object with the `level` logging level, fetches its
+// `std::stringstream` object, formats and accumulates the user-supplied data
+// and, finally:
+// - prints the resulting string on `std::cout`;
+// - persists the resulting string into the log file (if specified).
 std::ostringstream &log::get(level l)
 {
   level_ = std::min(FATAL, l);
@@ -63,7 +57,7 @@ log::~log()
 {
   static const std::string tags[] =
   {
-    "ALL", "DEBUG", "INFO", "", "WARNING", "ERROR", "FATAL", ""
+    "ALL", "DEBUG", "INFO", "OUTPUT", "WARNING", "ERROR", "FATAL", ""
   };
 
   if (stream && level_ >= reporting_level)
@@ -73,17 +67,16 @@ log::~log()
     *stream << std::put_time(&lt, "%T") << '\t' << tags[level_] << '\t'
             << os.str() << std::endl;
   }
+
+  if (level_ == OUTPUT)
+    std::cout << os.str() << std::endl;
 }
 
-///
-/// Sets the `log::stream` variable with a convenient value.
-///
-/// \param[in] base base filepath of the log (e.g. `/home/doe/app`)
-///
-/// Given the `/home/doe/app` arguments associates the `log::stream` variable
-/// with the `app_123_18_30_00.log` file (the numbers represents the current:
-/// day of the year, hours, minutes, seconds) in the `/home/doe/` directory.
-///
+// Sets the `log::stream` variable with a convenient value.
+//
+// Given the `/home/doe/app` arguments associates the `log::stream` variable
+// with the `app_123_18_30_00.log` file (the numbers represents the current:
+// day of the year, hours, minutes, seconds) in the `/home/doe/` directory.
 void log::setup_stream(const std::string &base)
 {
   const auto lt(tm_now());

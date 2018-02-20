@@ -22,6 +22,8 @@ namespace testudo
 // performance boost. So KISS.
 using movelist = std::vector<move>;
 
+std::ostream &operator<<(std::ostream &, const movelist &);
+
 /*
 class movelist
 {

@@ -15,37 +15,33 @@
 
 namespace testudo
 {
-///
-/// We always run into the task of measuring the time between two points.
-///
-/// The timer class cuts down the verbose syntax needed to measure the elapsed
-/// time. It's similar to `boost::cpu_timer` but tailored to our needs (so less
-/// general).
-///
-/// The simplest and most common use is:
-///
-///     int main()
-///     {
-///       timer t;
-///
-///       do_stuff_and_burn_some_time();
-///
-///       std::cout << "Elapsed (ms): " << t.elapsed().count() << '\n'
-///
-///     }
-///
-/// \warning
-/// A useful recommendation is to never trust timings unless they are:
-/// * at least 100 times longer than the CPU time resolution
-/// * run multiple times
-/// * run on release builds.
-/// .. and results that are too good to be true need to be investigated
-/// skeptically.
-///
-/// \remark
-/// The original idea is of Kjellkod (http://kjellkod.wordpress.com).
-///
 
+// We always run into the task of measuring the time between two points.
+//
+// The timer class cuts down the verbose syntax needed to measure the elapsed
+// time. It's similar to `boost::cpu_timer` but tailored to our needs (so less
+// general).
+//
+// The simplest and most common use is:
+//
+//     int main()
+//     {
+//       timer t;
+//
+//       do_stuff_and_burn_some_time();
+//
+//       std::cout << "Elapsed (ms): " << t.elapsed().count() << '\n'
+//
+//     }
+//
+// A useful recommendation is to never trust timings unless they are:
+// * at least 100 times longer than the CPU time resolution
+// * run multiple times
+// * run on release builds.
+// .. and results that are too good to be true need to be investigated
+// skeptically.
+//
+// The original idea is of Kjellkod (http://kjellkod.wordpress.com).
 class timer
 {
 public:
@@ -53,10 +49,8 @@ public:
 
   void restart() { start_ = std::chrono::steady_clock::now(); }
 
-  ///
-  /// \return time elapsed in milliseconds (as would be measured by a clock
-  ///         on the wall. It's NOT the processor time)
-  ///
+  // Time elapsed in milliseconds (as would be measured by a clock on the wall.
+  // It's NOT the processor time).
   std::chrono::milliseconds elapsed() const
   {
     return std::chrono::duration_cast<std::chrono::milliseconds>(

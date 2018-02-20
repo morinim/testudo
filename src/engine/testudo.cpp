@@ -17,35 +17,33 @@
 namespace testudo
 {
 
-/******************************************************************************
- * CECP interface (aka Xboard)
- *****************************************************************************/
+// CECP (aka Xboard) interface
 namespace CECP
 {
 
 void print_move_or_result(const state &s, const move &m)
 {
-  std::cout << "move " << m << std::endl;
+  testudoOUTPUT << "move " << m;
 
   switch (s.mate_or_draw())
   {
   case state::kind::mated:
     if (s.side() == WHITE)
-      std::cout << "0-1 {Black mates}\n";
+      testudoOUTPUT << "0-1 {Black mates}";
     else
-      std::cout << "1-0 {White mates}\n";
+      testudoOUTPUT << "1-0 {White mates}";
     break;
 
   case state::kind::draw_stalemate:
-    std::cout << "1/2-1/2 {Stalemate}\n";
+    testudoOUTPUT << "1/2-1/2 {Stalemate}";
     break;
 
   case state::kind::draw_fifty:
-    std::cout << "1/2-1/2 {Draw by fifty move rule}\n";
+    testudoOUTPUT << "1/2-1/2 {Draw by fifty move rule}";
     break;
 
   case state::kind::draw_repetition:
-    std::cout << "1/2-1/2 {Draw by repetition}\n";
+    testudoOUTPUT << "1/2-1/2 {Draw by repetition}";
     break;
 
   default:
@@ -103,7 +101,7 @@ void loop()
 
     std::string line;
     while (!std::getline(std::cin, line))
-      std::this_thread::sleep_for(500ms);
+      std::this_thread::sleep_for(400ms);
 
     std::istringstream is(line);
     std::string cmd;
@@ -127,14 +125,16 @@ void loop()
       const auto m(g.think(false));
 
       if (!m.is_sentry())
-        std::cout << "Hint: " << m << std::endl;
+      {
+        testudoOUTPUT << "Hint: " << m;
+      }
       continue;
     }
     if (cmd == "ics")
     {
       std::string server;  is >> server;
       g.ics = (server != "-");
-      std::cout << "# Setting ICS server to: " << g.ics << std::endl;
+      testudoINFO << "Setting ICS server to: " << g.ics;
       continue;
     }
     if (cmd == "level")
@@ -150,7 +150,7 @@ void loop()
       if (g.ics && time == 0s)
       {
         time = 10s;
-        std::cout << "Adjusting time to 10s" << std::endl;
+        testudoINFO << "Adjusting time to 10s";
       }
 
       g.level(moves, time);
@@ -171,8 +171,8 @@ void loop()
     if (cmd == "protover")
     {
       int version;  is >> version;  // skips version
-      std::cout << "feature myname=\"TESTUDO 0.9\" playother=1 sigint=0 "
-                   "colors=0 setboard=1 ics=1 debug=1 done=1" << std::endl;
+      testudoOUTPUT << "feature myname=\"TESTUDO 0.9\" playother=1 sigint=0 "
+                       "colors=0 setboard=1 ics=1 debug=1 done=1";
       continue;
     }
     if (cmd == "playother")
@@ -229,7 +229,7 @@ void loop()
 
     const move m(g.current_state().parse_move(cmd));
     if (!m)
-      std::cout << "Error (unknown command): " << cmd << std::endl;
+      testudoOUTPUT << "Error (unknown command): " << cmd;
     else
       g.make_move(m);
   }
@@ -239,9 +239,7 @@ void loop()
 
 }  // namespace testudo
 
-/******************************************************************************
- * main
- *****************************************************************************/
+
 #if !defined(TESTUDO_CONFIG_TEST)
 int main()
 {

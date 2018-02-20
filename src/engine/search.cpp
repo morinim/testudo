@@ -14,6 +14,7 @@
 #include "search.h"
 #include "cache.h"
 #include "eval.h"
+#include "log.h"
 #include "util.h"
 
 namespace testudo
@@ -435,7 +436,8 @@ score search::alphabeta(const state &s, score alpha, score beta,
 }
 
 // Extract the PV from the transposition table.
-// At least one should always be returned (even in case of immediate draw).
+// At least one move should always be availeble (even in case of immediate
+// draw).
 movelist search::extract_pv() const
 {
   movelist pv;
@@ -470,9 +472,9 @@ score search::aspiration_search(score *alpha, score *beta, int draft)
 
   if (x <= *alpha || x >= *beta)
   {
-    std::cout << stats.depth << ' ' << (x <= *alpha ? "--" : "++") << ' '
-              << search_time_.elapsed().count() / 10 << ' ' << stats.snodes
-              << ' ' << stats.moves_at_root.front() << std::endl;
+    testudoOUTPUT << stats.depth << ' ' << (x <= *alpha ? "--" : "++") << ' '
+                  << search_time_.elapsed().count() / 10 << ' ' << stats.snodes
+                  << ' ' << stats.moves_at_root.front();
 
     x = alphabeta_root(root_state_, -INF, +INF, draft);
   }
@@ -524,18 +526,14 @@ move search::run(bool verbose)
       break;
 
     best_move = stats.moves_at_root.front();
-    assert(extract_pv().front() == best_move);
     const auto pv(extract_pv());
+    assert(pv.front() == best_move);
 
     if (verbose)
     {
-      std::cout << stats.depth << ' ' << x << ' '
-                << search_time_.elapsed().count() / 10 << ' ' << stats.snodes;
-
-      for (const auto &m : pv)
-        std::cout << ' ' << m;
-
-      std::cout << std::endl;
+      testudoOUTPUT << stats.depth << ' ' << x << ' '
+                    << search_time_.elapsed().count() / 10 << ' '
+                    << stats.snodes << ' ' << pv;
     }
 
     if (is_mate(x)
