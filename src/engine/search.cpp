@@ -301,10 +301,10 @@ score search::alphabeta_root(const state &s, score alpha, score beta, int draft)
   {
     const auto new_draft(draft + delta_draft(in_check, moves[i]));
 
-    const auto x(draft > PLY ? -alphabeta(s.after_move(moves[i]),
-                                          -beta, -alpha, 1, new_draft)
-                             : -quiesce(s.after_move(moves[i]),
-                                        -beta, -alpha));
+    const auto x(new_draft < PLY
+                 ? -quiesce(s.after_move(moves[i]), -beta, -alpha)
+                 : -alphabeta(s.after_move(moves[i]), -beta, -alpha, 1,
+                              new_draft));
 
     if (x > best_score)
     {
@@ -412,9 +412,10 @@ score search::alphabeta(const state &s, score alpha, score beta,
   {
     const auto new_draft(draft + delta_draft(in_check, m));
 
-    const auto x(draft > PLY ? -alphabeta(s.after_move(m), -beta, -alpha,
-                                          ply + 1, new_draft)
-                             : -quiesce(s.after_move(m), -beta, -alpha));
+    const auto x(new_draft < PLY
+                 ? -quiesce(s.after_move(m), -beta, -alpha)
+                 : -alphabeta(s.after_move(m), -beta, -alpha,
+                              ply + 1, new_draft));
 
     if (x > best_score)
     {
