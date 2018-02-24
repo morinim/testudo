@@ -52,7 +52,7 @@ private:
   score alphabeta(const state &, score, score, unsigned, int);
   score alphabeta_root(const state &, score, score, int);
   score aspiration_search(score *, score *, int);
-  int delta_draft(bool, const move &) const;
+  int new_draft(int, bool, const move &) const;
   movelist extract_pv() const;
   int quiesce(const state &, score, score);
   movelist sorted_captures(const state &);

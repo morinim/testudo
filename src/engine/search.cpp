@@ -257,17 +257,20 @@ movelist search::sorted_moves(const state &s)
   return moves;
 }
 
-int search::delta_draft(bool in_check, const move &m) const
+int search::new_draft(int draft, bool in_check, const move &m) const
 {
   int delta(-PLY);
 
+  // The formula:
+  // - do not allow entering quiescence search when in check;
+  // - do not extend search when there is a lot of draft.
   if (in_check)
-    delta += 3 * PLY / 4;
+    delta += 2 * PLY * PLY / std::max(draft, 1);
 
   if (is_capture(m))
-    delta += PLY / 2;
+    delta += PLY/2;
 
-  return std::min(0, delta);
+  return draft + std::min(0, delta);
 }
 
 // A slightly modified version of alphabeta (not stricly necessary but helps
@@ -299,12 +302,11 @@ score search::alphabeta_root(const state &s, score alpha, score beta, int draft)
 
   for (std::size_t i(0); i < moves.size(); ++i)
   {
-    const auto new_draft(draft + delta_draft(in_check, moves[i]));
+    const auto d(new_draft(draft, in_check, moves[i]));
 
-    const auto x(new_draft < PLY
+    const auto x(d < PLY
                  ? -quiesce(s.after_move(moves[i]), -beta, -alpha)
-                 : -alphabeta(s.after_move(moves[i]), -beta, -alpha, 1,
-                              new_draft));
+                 : -alphabeta(s.after_move(moves[i]), -beta, -alpha, 1, d));
 
     if (x > best_score)
     {
@@ -410,12 +412,11 @@ score search::alphabeta(const state &s, score alpha, score beta,
   move m(move::sentry());
   while (!(m = moves.next()).is_sentry())
   {
-    const auto new_draft(draft + delta_draft(in_check, m));
+    const auto d(new_draft(draft, in_check, m));
 
-    const auto x(new_draft < PLY
+    const auto x(d < PLY
                  ? -quiesce(s.after_move(m), -beta, -alpha)
-                 : -alphabeta(s.after_move(m), -beta, -alpha,
-                              ply + 1, new_draft));
+                 : -alphabeta(s.after_move(m), -beta, -alpha, ply + 1, d));
 
     if (x > best_score)
     {
