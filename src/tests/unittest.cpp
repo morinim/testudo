@@ -459,16 +459,17 @@ TEST_CASE("hash_store_n_probe")
                [&tt](const state &pos, const move &m)
                {
                  tt.insert(pos.hash(), m, pos.hash() & 0xFF,
-                           score_type::ignore, pos.hash() & 0xFFF);
+                           score_type::exact, pos.hash() & 0xFFF);
 
                  const auto *slot(tt.find(pos.hash()));
 
                  // With an always-replace strategy, the last element inserted
                  // is always available.
                  CHECK(slot);
+                 CHECK(slot->hash() == pos.hash());
                  CHECK(slot->best_move() == m);
                  CHECK(slot->draft() == (pos.hash() & 0xFF));
-                 CHECK(slot->type() == score_type::ignore);
+                 CHECK(slot->type() == score_type::exact);
                  CHECK(slot->value() == (pos.hash() & 0xFFF));
                });
 }

@@ -20,7 +20,7 @@ namespace testudo
 {
 
 enum class score_type : std::uint8_t
-{ignore, exact, fail_high /* cut */, fail_low};
+{exact, fail_high /* lowerbound */, fail_low /* upperbound */};
 
 // The cache class (aka transposition table) consists of a power of 2 number of
 // `slot`-`slot` pairs. Each non-empty slot contains information about exactly
@@ -48,13 +48,10 @@ public:
   class slot
   {
   public:
-    constexpr slot(hash_t h = 0, move m = move::sentry(), int d = 0,
-                   score_type t = score_type::ignore, score v = 0,
-                   std::uint8_t a = 0) noexcept
-    : hash_(h), best_move_(m), draft_(d), value_(v), type_(t), age_(a)
+    constexpr slot() noexcept
+    : hash_(0), best_move_(move::sentry()), draft_(0), value_(+INF),
+      type_(score_type::fail_low), age_(0)
     {
-      assert(std::numeric_limits<decltype(value_)>::min() <= v);
-      assert(v <= std::numeric_limits<decltype(value_)>::max());
     }
 
     constexpr void save(hash_t, move, int, score_type, score,

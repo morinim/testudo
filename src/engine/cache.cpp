@@ -113,7 +113,7 @@ void cache::insert(hash_t h, const move &m, int draft, score_type t,
   if (v >= MATE)
   {
     if (t == score_type::fail_low)  // failing low on MATE
-      t = score_type::ignore;       // don't allow a cutoff later
+      v = +INF;                     // don't allow a cutoff later
     else
     {
       t = score_type::fail_high;    // exact/fail-high, turned into a fail-high
@@ -123,7 +123,7 @@ void cache::insert(hash_t h, const move &m, int draft, score_type t,
   else if (v <= -MATE)
   {
     if (t == score_type::fail_high) // fail high on -MATE
-      t = score_type::ignore;       // dont't allow cutoff later
+      v = -INF;                     // dont't allow cutoff later
     else
     {
       t = score_type::fail_low;     // exact/fail-low, turned into a fail-low

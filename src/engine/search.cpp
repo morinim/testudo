@@ -382,8 +382,6 @@ score search::alphabeta(const state &s, score alpha, score beta,
   if (entry && entry->draft() >= draft)
     switch (entry->type())
     {
-    case score_type::exact:
-      return entry->value();
     case score_type::fail_low:
       if (entry->value() <= alpha)
         return entry->value();
@@ -392,8 +390,8 @@ score search::alphabeta(const state &s, score alpha, score beta,
       if (entry->value() >= beta)
         return entry->value();
       break;
-    default:  // score_type::ignore
-      ;
+    default:  // score_type::exact
+      return entry->value();
     }
 
   move_provider moves(s, entry);
