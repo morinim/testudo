@@ -295,6 +295,8 @@ score search::alphabeta_root(const state &s, score alpha, score beta, int draft)
   const bool in_check(s.in_check());
 
   auto best_move(move::sentry());
+  auto best_score(-INF);
+
   for (std::size_t i(0); i < moves.size(); ++i)
   {
     const auto new_draft(draft + delta_draft(in_check, moves[i]));
@@ -304,32 +306,35 @@ score search::alphabeta_root(const state &s, score alpha, score beta, int draft)
                              : -quiesce(s.after_move(moves[i]),
                                         -beta, -alpha));
 
-    if (x > alpha)
+    if (x > best_score)
     {
-      best_move = moves[i];
+      best_score = x;
 
-      // Moves at the root node are very important and they're kept in the best
-      // available order (given the search history).
-      std::copy_backward(&moves[0], &moves[i], &moves[i+1]);
-      moves[0] = best_move;
-
-      if (x >= beta)
+      if (x > alpha)
       {
-        if (!search_stopped_)
-          tt_->insert(s.hash(), best_move, draft, score_type::fail_high, beta);
+        best_move  = moves[i];
 
-        return beta;
+        // Moves at the root node are very important and they're kept in the
+        // best available order (given the search history).
+        std::copy_backward(&moves[0], &moves[i], &moves[i+1]);
+        moves[0] = best_move;
+
+        if (x >= beta)
+          break;
+
+        alpha = x;
       }
-
-      alpha = x;
     }
   }
 
   if (!search_stopped_)
-    tt_->insert(s.hash(), best_move, draft,
-                !best_move ? score_type::fail_low : score_type::exact, alpha);
+  {
+    const auto type(best_score >= beta ? score_type::fail_high :
+                    !best_move ? score_type::fail_low : score_type::exact);
+    tt_->insert(s.hash(), best_move, draft, type, best_score);
+  }
 
-  return alpha;
+  return best_score;
 }
 
 // Recursively implements negamax alphabeta until draft is exhausted, at which
@@ -381,11 +386,11 @@ score search::alphabeta(const state &s, score alpha, score beta,
       return entry->value();
     case score_type::fail_low:
       if (entry->value() <= alpha)
-        return alpha;
+        return entry->value();
       break;
     case score_type::fail_high:
       if (entry->value() >= beta)
-        return beta;
+        return entry->value();
       break;
     default:  // score_type::ignore
       ;
@@ -402,6 +407,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
     return 0;
 
   auto best_move(move::sentry());
+  auto best_score(-INF);
 
   move m(move::sentry());
   while (!(m = moves.next()).is_sentry())
@@ -412,27 +418,30 @@ score search::alphabeta(const state &s, score alpha, score beta,
                                           ply + 1, new_draft)
                              : -quiesce(s.after_move(m), -beta, -alpha));
 
-    if (x > alpha)
+    if (x > best_score)
     {
-      best_move = m;
+      best_score = x;
 
-      if (x >= beta)
+      if (x > alpha)
       {
-        if (!search_stopped_)
-          tt_->insert(s.hash(), best_move, draft, score_type::fail_high, beta);
+        best_move = m;
 
-        return beta;
+        if (x >= beta)
+          break;
+
+        alpha = x;
       }
-
-      alpha = x;
     }
   }
 
   if (!search_stopped_)
-    tt_->insert(s.hash(), best_move, draft,
-                !best_move ? score_type::fail_low : score_type::exact, alpha);
+  {
+    const auto type(best_score >= beta ? score_type::fail_high :
+                    !best_move ? score_type::fail_low : score_type::exact);
+    tt_->insert(s.hash(), best_move, draft, type, best_score);
+  }
 
-  return alpha;
+  return best_score;
 }
 
 // Extract the PV from the transposition table.
