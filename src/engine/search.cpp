@@ -262,7 +262,7 @@ int search::delta_draft(bool in_check, const move &m) const
   int delta(-PLY);
 
   if (in_check)
-    delta += 15*PLY/16;
+    delta += 3 * PLY / 4;
 
   if (is_capture(m))
     delta += PLY / 2;

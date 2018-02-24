@@ -24,7 +24,7 @@ class cache;
 class search
 {
 public:
-  static constexpr int PLY = 16;
+  static constexpr int PLY = 4;
 
   search(const std::vector<state> &, cache *);
 
