@@ -89,12 +89,12 @@ private:
 
   std::array<piece, 64> board_; // piece+color or EMPTY
   color stm_;                   // side to move
-  unsigned castle_;             // castle permissions
+  std::uint8_t castle_;         // castle permissions
   square ep_;                   // en passant square
-  unsigned fifty_;              // handles the fifty-move-draw rule
+  std::uint8_t fifty_;          // handles the fifty-move-draw rule
 
-  square king_[2];
   hash_t hash_;
+  square king_[2];
 };
 
 inline state state::after_move(const move &m) const

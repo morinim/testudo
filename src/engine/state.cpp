@@ -121,7 +121,7 @@ std::ostream &operator<<(std::ostream &o, const state &s)
 state::state(setup t) noexcept
   : stm_(WHITE),
     castle_(white_kingside|white_queenside|black_kingside|black_queenside),
-    ep_(-1), fifty_(0), king_{-1, -1}, hash_(0)
+    ep_(-1), fifty_(0), hash_(0), king_{-1, -1}
 {
   std::fill(board_.begin(), board_.end(), EMPTY);
 
