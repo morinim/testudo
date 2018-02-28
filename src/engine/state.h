@@ -94,7 +94,12 @@ private:
   std::uint8_t fifty_;          // handles the fifty-move-draw rule
 
   hash_t hash_;
-  square king_[2];
+
+  // Piece counter. E.g `piece_cnt[WHITE][piece::knight]` contains the number
+  // of white knights on the board.
+  // `piece_cnt[WHITE][piece::king]` is special: since there are always two
+  // kings, we use the slot to store the kings' position.
+  std::uint8_t piece_cnt_[2][6];
 };
 
 inline state state::after_move(const move &m) const
@@ -108,7 +113,8 @@ inline bool operator==(const state &lhs, const state &rhs)
 {
   return lhs.board_ == rhs.board_ && lhs.side() == rhs.side()
          && lhs.castle() == rhs.castle()
-         && lhs.en_passant() == rhs.en_passant() && lhs.fifty() == rhs.fifty();
+         && lhs.en_passant() == rhs.en_passant() && lhs.fifty() == rhs.fifty()
+         && lhs.hash() == rhs.hash();
 }
 
 inline bool operator!=(const state &lhs, const state &rhs)

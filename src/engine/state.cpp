@@ -121,7 +121,7 @@ std::ostream &operator<<(std::ostream &o, const state &s)
 state::state(setup t) noexcept
   : stm_(WHITE),
     castle_(white_kingside|white_queenside|black_kingside|black_queenside),
-    ep_(-1), fifty_(0), hash_(0), king_{-1, -1}
+    ep_(-1), fifty_(0), hash_(0), piece_cnt_{}
 {
   std::fill(board_.begin(), board_.end(), EMPTY);
 
@@ -495,8 +495,8 @@ bool state::attack(square target, color attacker) const
 
 bool state::in_check(color c) const
 {
-  assert(board_[king_[c]] == piece(c, piece::king));
-  return attack(king_[c], !c);
+  assert(board_[piece_cnt_[c][piece::king]] == piece(c, piece::king));
+  return attack(piece_cnt_[c][piece::king], !c);
 }
 
 // Erases a piece on a given square and takes care for all the incrementally
@@ -509,6 +509,10 @@ void state::clear_square(square i)
 
   hash_ ^= zobrist::piece[p.id()][i];
   board_[i] = EMPTY;
+
+  assert(p.type() == piece::king || piece_cnt_[p.color()][p.type()]);
+  if (p.type() != piece::king)
+    --piece_cnt_[p.color()][p.type()];
 }
 
 // Place a piece on a given square and takes care for all the incrementally
@@ -523,7 +527,9 @@ void state::fill_square(piece p, square i)
   board_[i] = p;
 
   if (p.type() == piece::king)
-    king_[p.color()] = i;
+    piece_cnt_[p.color()][piece::king] = i;
+  else
+    ++piece_cnt_[p.color()][p.type()];
 }
 
 bool state::make_move(const move &m)
