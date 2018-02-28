@@ -50,7 +50,7 @@ private:
   static constexpr std::uintmax_t nodes_between_checks = 2048;
 
   score alphabeta(const state &, score, score, unsigned, int);
-  score alphabeta_root(const state &, score, score, int);
+  score alphabeta_root(score, score, int);
   score aspiration_search(score *, score *, int);
   int new_draft(int, bool, const move &) const;
   movelist extract_pv() const;

@@ -281,13 +281,13 @@ int search::new_draft(int draft, bool in_check, const move &m) const
 //   IS AN IMPORTANT DIFFERENCE;
 // - the function assumes that the position isn't a stalemate / immediate mate;
 // - the function ignores draw by repetition / 50 moves rule (we want a move).
-score search::alphabeta_root(const state &s, score alpha, score beta, int draft)
+score search::alphabeta_root(score alpha, score beta, int draft)
 {
   assert(alpha < beta);
 
   ++stats.snodes;
 
-  path_info_.push(s);
+  path_info_.push(root_state_);
   auto guard = finally([&]{ path_info_.pop(); });
 
   auto &moves(stats.moves_at_root);
@@ -295,7 +295,7 @@ score search::alphabeta_root(const state &s, score alpha, score beta, int draft)
     moves = sorted_moves(root_state_);
   assert(!moves.empty());
 
-  const bool in_check(s.in_check());
+  const bool in_check(root_state_.in_check());
 
   auto best_move(move::sentry());
   auto type(score_type::fail_low);
@@ -305,8 +305,9 @@ score search::alphabeta_root(const state &s, score alpha, score beta, int draft)
     const auto d(new_draft(draft, in_check, moves[i]));
 
     const auto x(d < PLY
-                 ? -quiesce(s.after_move(moves[i]), -beta, -alpha)
-                 : -alphabeta(s.after_move(moves[i]), -beta, -alpha, 1, d));
+                 ? -quiesce(root_state_.after_move(moves[i]), -beta, -alpha)
+                 : -alphabeta(root_state_.after_move(moves[i]), -beta, -alpha,
+                              1, d));
 
     if (x > alpha)
     {
@@ -331,7 +332,7 @@ score search::alphabeta_root(const state &s, score alpha, score beta, int draft)
   const auto val(type == score_type::fail_high ? beta : alpha);
 
   if (!search_stopped_)
-    tt_->insert(s.hash(), best_move, draft, type, val);
+    tt_->insert(root_state_.hash(), best_move, draft, type, val);
 
   return val;
 }
@@ -468,7 +469,7 @@ movelist search::extract_pv() const
 // re-search must be made.
 score search::aspiration_search(score *alpha, score *beta, int draft)
 {
-  auto x(alphabeta_root(root_state_, *alpha, *beta, draft));
+  auto x(alphabeta_root(*alpha, *beta, draft));
 
   if (search_stopped_)
     return 0;
@@ -479,7 +480,7 @@ score search::aspiration_search(score *alpha, score *beta, int draft)
                   << search_time_.elapsed().count() / 10 << ' ' << stats.snodes
                   << ' ' << stats.moves_at_root.front();
 
-    x = alphabeta_root(root_state_, -INF, +INF, draft);
+    x = alphabeta_root(-INF, +INF, draft);
   }
 
   if (search_stopped_)
