@@ -35,8 +35,8 @@ struct move
   constexpr enum piece::type promote() const noexcept;
 
   // A sentinel value (empty move, end of iteration...).
-  static constexpr move sentry() noexcept { return move(-1, -1, 0); }
-  constexpr bool is_sentry() const noexcept { return !valid(from); }
+  static constexpr move sentry() noexcept { return move(0, 0, 0); }
+  constexpr bool is_sentry() const noexcept { return from == to; }
 
   square    from;
   square      to;
