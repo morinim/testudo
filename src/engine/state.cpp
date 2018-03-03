@@ -158,10 +158,9 @@ state state::color_flip() const
 {
   state ret(setup::empty);
 
-  // An exclusive or with 56 performs a verical flip of the coordinates.
   for (square i(0); i < 64; ++i)
     if (board_[i] != EMPTY)
-      ret.fill_square(piece(!board_[i].color(), board_[i].type()), i ^ 56);
+      ret.fill_square(piece(!board_[i].color(), board_[i].type()), flip(i));
   ret.hash_ = zobrist::hash(*this);
 
   ret.stm_ = !side();

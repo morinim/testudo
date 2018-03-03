@@ -46,6 +46,10 @@ inline constexpr unsigned second_rank(color c) { return c == BLACK ? 6 : 1; }
 inline constexpr unsigned seventh_rank(color c) { return c == BLACK ? 1 : 6; }
 inline constexpr unsigned eighth_rank(color c) { return c == BLACK ? 0 : 7; }
 
+// An exclusive-or with `56` performs a vertical flip of the coordinates.
+inline constexpr square flip(square sq)
+{ return sq ^ 56; }
+
 }  // namespace testudo
 
 #endif // include guard
