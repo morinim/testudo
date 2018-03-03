@@ -60,18 +60,27 @@ private:
 
   state root_state_;
 
-  // Contains information about the path leading to the node being analyzed.
-  struct path_info
+  struct driver
   {
-    explicit path_info(const std::vector<state> &);
+    explicit driver(const std::vector<state> &);
 
-    bool repetitions() const;
+    // Contains information about the path leading to the node being analyzed.
+    struct path_info
+    {
+      explicit path_info(const std::vector<state> &);
 
-    void push(const state &);
-    void pop();
+      bool repetitions() const;
 
-    std::vector<hash_t> states;  // used for repetition detection
-  } path_info_;
+      void push(const state &);
+      void pop();
+
+      std::vector<hash_t> states;  // used for repetition detection
+    } path;
+
+    void set_killer(unsigned, const move &);
+
+    std::vector<std::pair<move, move>> killers;
+  } driver_;
 
   cache *tt_;
 
@@ -85,7 +94,7 @@ private:
 // - `tt` is a pointer to an external hash table.
 inline search::search(const std::vector<state> &states, cache *tt)
   : stats(), max_time(0), max_depth(0), root_state_(states.back()),
-    path_info_(states), tt_(tt), search_time_(), search_stopped_(false)
+    driver_(states), tt_(tt), search_time_(), search_stopped_(false)
 {
   assert(!states.empty());
   assert(tt);

@@ -26,6 +26,7 @@ struct move
     promotion_n = 32, promotion_b = 64, promotion_r = 128, promotion_q = 256
   };
 
+  move() = default;
   constexpr move(square from_sq, square to_sq, flags_t move_flags) noexcept
     : from(from_sq), to(to_sq), flags(move_flags)
   {
@@ -76,6 +77,13 @@ inline constexpr bool is_promotion(const move &m) noexcept
   return m.flags
          & (move::promotion_n|move::promotion_b
             |move::promotion_r|move::promotion_q);
+}
+
+inline constexpr bool is_quiet(const move &m)
+{
+  return !(m.flags & (move::capture
+                      |move::promotion_n|move::promotion_b
+                      |move::promotion_r|move::promotion_q));
 }
 
 // Move in coordinate notation (g1f3, a7a8q).

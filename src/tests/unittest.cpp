@@ -344,37 +344,50 @@ TEST_CASE("move")
   const state s(
     "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
 
-  for (const auto &m : s.moves())
-  {
-    if (is_capture(m))
-    {
-      CHECK(!(m.flags & move::castle));
-      CHECK(!(m.flags & move::two_squares));
-    }
+  foreach_game(100, s,
+               [](const state &pos, const move &m)
+               {
+                 if (is_capture(m))
+                 {
+                   CHECK(!(m.flags & move::castle));
+                   CHECK(!(m.flags & move::two_squares));
+                 }
 
-    if (m.flags & move::castle)
-    {
-      CHECK(!(m.flags & move::en_passant));
-      CHECK(!(m.flags & move::two_squares));
-      CHECK(!(m.flags & move::pawn));
-      CHECK(!is_promotion(m));
-    }
+                 if (is_promotion(m))
+                 {
+                   CHECK((m.flags & move::pawn));
+                   CHECK(rank(m.from) == seventh_rank(pos.side()));
+                 }
 
-    if (m.flags & move::en_passant)
-    {
-      CHECK(is_capture(m));
-      CHECK(!(m.flags & move::two_squares));
-      CHECK((m.flags & move::pawn));
-      CHECK(!is_promotion(m));
-    }
+                 if (is_quiet(m))
+                 {
+                   CHECK(!is_capture(m));
+                   CHECK(!is_promotion(m));
+                 }
 
-    if (m.flags & move::two_squares)
-    {
-      CHECK(!is_promotion(m));
-    }
+                 if (m.flags & move::castle)
+                 {
+                   CHECK(!(m.flags & move::en_passant));
+                   CHECK(!(m.flags & move::two_squares));
+                   CHECK(!(m.flags & move::pawn));
+                   CHECK(!is_promotion(m));
+                 }
 
-    CHECK(!m.is_sentry());
-  }
+                 if (m.flags & move::en_passant)
+                 {
+                   CHECK(is_capture(m));
+                   CHECK(!(m.flags & move::two_squares));
+                   CHECK((m.flags & move::pawn));
+                   CHECK(!is_promotion(m));
+                 }
+
+                 if (m.flags & move::two_squares)
+                 {
+                   CHECK(!is_promotion(m));
+                 }
+
+                 CHECK(!m.is_sentry());
+               });
 }
 
 TEST_CASE("perft")

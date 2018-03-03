@@ -20,6 +20,9 @@
 namespace testudo
 {
 
+namespace
+{
+
 // A convenient class to extract one move at time from the list of the legal
 // ones.
 // We don't sort the whole move list, but perform a selection sort each time a
@@ -33,12 +36,12 @@ public:
 
   move_provider(const state &, const cache::slot *);
 
-  move next();
+  move next(const std::pair<move, move> &);
   bool empty();
 
 private:
   static constexpr int SORT_CAPTURE = 100000;
-
+  static constexpr int SORT_KILLER  =  50000;
   void move_gen();
 
   const state           &s_;
@@ -49,6 +52,7 @@ private:
 };
 
 constexpr int move_provider::SORT_CAPTURE;
+constexpr int move_provider::SORT_KILLER;
 
 // If there is a legal move from the hash table (so we check `entry`), move
 // generation can be delayed: often the move is enough to cause a cutoff and
@@ -89,7 +93,7 @@ bool move_provider::empty()
   return moves_.empty();
 }
 
-move move_provider::next()
+move move_provider::next(const std::pair<move, move> &killers)
 {
   const auto move_score(
     [&](const move &m)
@@ -98,6 +102,11 @@ move move_provider::next()
       // searched in the groups of the capture moves.
       if (is_capture(m))
         return (s_[m.to].value() << 8) - s_[m.from].value() + SORT_CAPTURE;
+
+      if (m == killers.first)
+        return SORT_KILLER;
+      if (m == killers.second)
+        return SORT_KILLER - 1;
 
       //if (m.flags & move::castle)
       //  return 1;
@@ -130,9 +139,28 @@ move move_provider::next()
   }
 }
 
+}  // unnamed namespace
+
+search::driver::driver(const std::vector<state> &ss) : path(ss), killers(1024)
+{
+}
+
+void search::driver::set_killer(unsigned ply, const move &m)
+{
+  assert(ply < killers.size());
+  assert(m.is_quiet());
+
+  // Makes sure killer moves will be different before saving secondary killer
+  // move.
+  if (killers[ply].first != m)
+    killers[ply].second = killers[ply].first;
+
+  killers[ply].first = m;
+}
+
 // Extraxt from the list of past known states (`ss`) a subset of hash values
 // used for repetition detection.
-search::path_info::path_info(const std::vector<state> &ss)
+search::driver::path_info::path_info(const std::vector<state> &ss)
 {
   assert(!ss.empty());
 
@@ -151,7 +179,7 @@ search::path_info::path_info(const std::vector<state> &ss)
 
 // Returns `true` if the current position (`states_.back()`) has been
 // repeated (compares the current hash value to already seen values).
-bool search::path_info::repetitions() const
+bool search::driver::path_info::repetitions() const
 {
   assert(!states.empty());
 
@@ -164,12 +192,12 @@ bool search::path_info::repetitions() const
   return i != current;
 }
 
-void search::path_info::push(const state &current)
+void search::driver::path_info::push(const state &current)
 {
   states.push_back(current.hash());
 }
 
-void search::path_info::pop()
+void search::driver::path_info::pop()
 {
   states.pop_back();
 }
@@ -287,8 +315,8 @@ score search::alphabeta_root(score alpha, score beta, int draft)
 
   ++stats.snodes;
 
-  path_info_.push(root_state_);
-  auto guard = finally([&]{ path_info_.pop(); });
+  driver_.path.push(root_state_);
+  auto guard = finally([&]{ driver_.path.pop(); });
 
   auto &moves(stats.moves_at_root);
   if (moves.empty())
@@ -361,8 +389,8 @@ score search::alphabeta(const state &s, score alpha, score beta,
       return 0;
   }
 
-  path_info_.push(s);
-  auto guard = finally([&]{ path_info_.pop(); });
+  driver_.path.push(s);
+  auto guard = finally([&]{ driver_.path.pop(); });
 
   // Check to see if this position has been searched before. If so, we may get
   // a real score, produce a cutoff or get nothing more than a good move to try
@@ -390,7 +418,8 @@ score search::alphabeta(const state &s, score alpha, score beta,
       if (entry->value() >= beta)
         return beta;
       break;
-    default:  // score_type::exact
+    default:
+      assert(entry->type() == score_type::exact);
       return entry->value();
     }
 
@@ -401,14 +430,14 @@ score search::alphabeta(const state &s, score alpha, score beta,
   if (moves.empty())
     return in_check ? -INF + ply : 0;
 
-  if (path_info_.repetitions() || s.fifty() >= 100)
+  if (driver_.path.repetitions() || s.fifty() >= 100)
     return 0;
 
   auto best_move(move::sentry());
   auto type(score_type::fail_low);
 
   move m(move::sentry());
-  while (!(m = moves.next()).is_sentry())
+  while (!(m = moves.next(driver_.killers[ply])).is_sentry())
   {
     const auto d(new_draft(draft, in_check, m));
 
@@ -423,11 +452,13 @@ score search::alphabeta(const state &s, score alpha, score beta,
       if (x >= beta)
       {
         type = score_type::fail_high;
+
+        driver_.set_killer(ply, best_move);
         break;
       }
 
-      alpha = x;
       type = score_type::exact;
+      alpha = x;
     }
   }
 
@@ -504,7 +535,7 @@ score search::aspiration_search(score *alpha, score *beta, int draft)
 // framework with best-first characteristics.
 move search::run(bool verbose)
 {
-  switch (root_state_.mate_or_draw(&path_info_.states))
+  switch (root_state_.mate_or_draw(&driver_.path.states))
   {
   case state::kind::mated:
   case state::kind::draw_stalemate:
