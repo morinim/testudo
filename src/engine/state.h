@@ -69,10 +69,13 @@ public:
   // Changes side to move.
   void switch_side() noexcept { stm_ = !stm_; }
 
+  state color_flip() const;
+
   move parse_move(const std::string &) const;
 
   hash_t hash() const noexcept { return hash_; }
-  unsigned repetitions() const noexcept;
+
+  unsigned piece_count(color, enum piece::type) const;
 
 private:
   void add_m(movelist &, square, square, move::flags_t) const;
@@ -107,6 +110,14 @@ inline state state::after_move(const move &m) const
   state after(*this);
   after.make_move(m);
   return after;
+}
+
+inline unsigned state::piece_count(color c, enum piece::type t) const
+{
+  assert(c == WHITE || c == BLACK);
+  assert(t != piece::king);
+
+  return piece_cnt_[c][t];
 }
 
 inline bool operator==(const state &lhs, const state &rhs)

@@ -18,8 +18,14 @@ namespace testudo
 
 struct score_vector
 {
-  score material[2] = {0, 0};
-  score pcsq[2] = {0, 0};
+  explicit score_vector(const state &);
+
+  int phase;
+
+  score material[2];
+
+  score pcsq_e[2];
+  score pcsq_m[2];
 };
 
 extern score eval(const state &);

@@ -119,9 +119,7 @@ std::ostream &operator<<(std::ostream &o, const state &s)
 }
 
 state::state(setup t) noexcept
-  : stm_(WHITE),
-    castle_(white_kingside|white_queenside|black_kingside|black_queenside),
-    ep_(-1), fifty_(0), hash_(0), piece_cnt_{}
+  : stm_(WHITE), castle_(0), ep_(-1), fifty_(0), hash_(0), piece_cnt_{}
 {
   std::fill(board_.begin(), board_.end(), EMPTY);
 
@@ -139,6 +137,8 @@ state::state(setup t) noexcept
       WROOK, WKNIGHT, WBISHOP, WQUEEN, WKING, WBISHOP, WKNIGHT, WROOK
     }});
 
+    castle_ = white_kingside|white_queenside|black_kingside|black_queenside;
+
     for (square i(0); i < 64; ++i)
       if (init_piece[i] != EMPTY)
         fill_square(init_piece[i], i);
@@ -147,6 +147,41 @@ state::state(setup t) noexcept
   // Fill square has already placed the pieces, but we need to embed into the
   // hash key other state information hence the call to `zobrist::hash`.
   hash_ = zobrist::hash(*this);
+}
+
+// Performs a vertical flipping (i.e. mirroring) of all pieces along the
+// horizontal axis between the 4th and 5th rank, also swapping the color of the
+// flipped pieces, the side to move, the castling rights and the rank of a
+// possible en-passant target square (e.g. a white pawn on C2 becomes a black
+// pawn on C7).
+state state::color_flip() const
+{
+  state ret(setup::empty);
+
+  // An exclusive or with 56 performs a verical flip of the coordinates.
+  for (square i(0); i < 64; ++i)
+    if (board_[i] != EMPTY)
+      ret.fill_square(piece(!board_[i].color(), board_[i].type()), i ^ 56);
+  ret.hash_ = zobrist::hash(*this);
+
+  ret.stm_ = !side();
+
+  ret.castle_ = 0;
+  if (castle() & white_kingside)
+    ret.castle_ |= black_kingside;
+  if (castle() & white_queenside)
+    ret.castle_ |= black_queenside;
+  if (castle() & black_kingside)
+    ret.castle_ |= white_kingside;
+  if (castle() & black_queenside)
+    ret.castle_ |= white_queenside;
+
+  if (en_passant())
+    ret.ep_ = en_passant() ^ 56;
+
+  ret.fifty_ = fifty_;
+
+  return ret;
 }
 
 // Sets up the state starting from a FEN (Forsyth-Edwards Notation)
@@ -211,10 +246,10 @@ state::state(const std::string &a_fen) : state(setup::empty)
   // ...castle rights...
   if (!(ss >> s))
     throw std::runtime_error("Wrong FEN format");
-  if (s.find('K') == std::string::npos)  castle_ &=  ~white_kingside;
-  if (s.find('Q') == std::string::npos)  castle_ &= ~white_queenside;
-  if (s.find('k') == std::string::npos)  castle_ &=  ~black_kingside;
-  if (s.find('q') == std::string::npos)  castle_ &= ~black_queenside;
+  if (s.find('K') != std::string::npos)  castle_ |=  white_kingside;
+  if (s.find('Q') != std::string::npos)  castle_ |= white_queenside;
+  if (s.find('k') != std::string::npos)  castle_ |=  black_kingside;
+  if (s.find('q') != std::string::npos)  castle_ |= black_queenside;
 
   // ...en passant square...
   if (!(ss >> s))

@@ -487,11 +487,29 @@ TEST_CASE("hash_store_n_probe")
                });
 }
 
+}  // TEST_SUITE "BASE"
+
+TEST_SUITE("EVAL")
+{
+// Verify that evaluation results are symmetrical between White and Black side
+TEST_CASE("eval_phase")
+{
+  for (const auto &test : test_set())
+    foreach_game(100, test.state,
+                 [](const state &pos, const move &)
+                 {
+                   score_vector e(pos);
+
+                   CHECK(0 <= e.phase);
+                   CHECK(e.phase <= 256);
+                 });
+}
+
 // Verify that evaluation results are symmetrical between White and Black side
 TEST_CASE("eval_flip")
 {
   for (const auto &test : test_set())
-    foreach_game(10, test.state,
+    foreach_game(100, test.state,
                  [](const state &pos, const move &)
                  {
                    const auto v(eval(pos));
@@ -499,10 +517,20 @@ TEST_CASE("eval_flip")
                    auto pos1(pos);
                    pos1.switch_side();
                    const auto v1(eval(pos1));
-
                    CHECK(v == -v1);
+
+                   // A side to move relative, bug free static evaluation
+                   // should have the same score for both positions
+                   const auto pos2(pos.color_flip());
+                   const auto v2(eval(pos2));
+                   CHECK(v == v2);
                  });
 }
+
+}  // TEST_SUITE "EVAL"
+
+TEST_SUITE("SEARCH")
+{
 
 TEST_CASE("search_with_no_move_available")
 {
@@ -515,7 +543,7 @@ TEST_CASE("search_with_no_move_available")
   CHECK(!m);
 }
 
-}  // TEST_SUITE "BASE"
+}  // TEST_SUITE "SEARCH"
 
 TEST_SUITE("ADVANCED" * doctest::skip())
 {
