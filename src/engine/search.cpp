@@ -40,8 +40,9 @@ public:
   bool empty();
 
 private:
-  static constexpr int SORT_CAPTURE = 100000;
-  static constexpr int SORT_KILLER  =  50000;
+  static constexpr int SORT_CAPTURE  = 100000;
+  static constexpr int SORT_PROMOTION = 60000;
+  static constexpr int SORT_KILLER   =  50000;
   void move_gen();
 
   const state           &s_;
@@ -52,6 +53,7 @@ private:
 };
 
 constexpr int move_provider::SORT_CAPTURE;
+constexpr int move_provider::SORT_PROMOTION;
 constexpr int move_provider::SORT_KILLER;
 
 // If there is a legal move from the hash table (so we check `entry`), move
@@ -98,20 +100,30 @@ move move_provider::next(const std::pair<move, move> &killers)
   const auto move_score(
     [&](const move &m)
     {
+      if (is_quiet(m))
+      {
+        if (m == killers.first)
+          return SORT_KILLER;
+        if (m == killers.second)
+          return SORT_KILLER - 1;
+
+        //if (m.flags & move::castle)
+        //  return 1;
+
+        return 0;
+      }
+
+      score v(0);
+
       // En passant gets a score lower than other PxP moves but are anyway
       // searched in the groups of the capture moves.
       if (is_capture(m))
-        return (s_[m.to].value() << 8) - s_[m.from].value() + SORT_CAPTURE;
+        v += (s_[m.to].value() << 8) - s_[m.from].value() + SORT_CAPTURE;
 
-      if (m == killers.first)
-        return SORT_KILLER;
-      if (m == killers.second)
-        return SORT_KILLER - 1;
+      if (is_promotion(m))
+        v += piece(WHITE, m.promote()).value() + SORT_PROMOTION;
 
-      //if (m.flags & move::castle)
-      //  return 1;
-
-      return 0;
+      return v;
     });
 
   switch (stage_)
