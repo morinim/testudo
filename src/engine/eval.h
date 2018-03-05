@@ -23,6 +23,7 @@ struct score_vector
   int phase;
 
   score material[2];
+  score adjust_material[2];
 
   score pcsq_e[2];
   score pcsq_m[2];

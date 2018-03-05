@@ -33,27 +33,14 @@ void clamp(T &v, const T &lo, const T &hi)
 
 }  // unnamed namespace
 
-namespace detail
-{
-
-// Piece/square tables for opening / middle-game (`pcsq_m_`) and end-game
-// (`pcsq_e_`).
-//
-// They're calculated starting from the `pcsq_` data member in the parameters
-// class. This approach allows to have a more narrow set of variables subject
-// to optimization.
-score pcsq_m_[piece::sup_id][64];
-score pcsq_e_[piece::sup_id][64];
-
-}  // namespace detail
-
 parameters db;
 
 parameters::parameters()
 {
   load();
 
-  pcsq_init();
+  pcsq_.init();
+  pp_adj_.init();
 }
 
 bool parameters::save() const
@@ -92,6 +79,16 @@ bool parameters::save() const
   j["pcsq"]["pawn_weight"]            = pcsq_.pawn_weight;
   j["pcsq"]["piece_weight"]           = pcsq_.piece_weight;
   j["pcsq"]["king_weight"]            = pcsq_.king_weight;
+
+  j["material"]["bishop_pair"] = bishop_pair_;
+  j["material"]["knight_pair"] = knight_pair_;
+  j["material"]["rook_pair"]   =   rook_pair_;
+
+  j["pp_adj"]["knight_wo_pawns_base"] = pp_adj_.knight_wo_pawns_base;
+  j["pp_adj"][  "rook_wo_pawns_base"] =   pp_adj_.rook_wo_pawns_base;
+
+  j["pp_adj"]["knight_wo_pawns_d"] = pp_adj_.knight_wo_pawns_d;
+  j["pp_adj"][  "rook_wo_pawns_d"] =   pp_adj_.rook_wo_pawns_d;
 
   std::ofstream f("testudo.json");
   return !!f && f << j;
@@ -140,73 +137,85 @@ bool parameters::load()
   pcsq_.piece_weight           = j["pcsq"]["piece_weight"];
   pcsq_.king_weight            = j["pcsq"]["king_weight"];
 
+  bishop_pair_ = j["material"]["bishop_pair"];
+  knight_pair_ = j["material"]["knight_pair"];
+  rook_pair_   = j["material"][  "rook_pair"];
+
+  clamp(bishop_pair_,   0, 50);
+  clamp(knight_pair_, -20, 20);
+  clamp(  rook_pair_, -30, 30);
+
+  pp_adj_.knight_wo_pawns_base = j["pp_adj"]["knight_wo_pawns_base"];
+  pp_adj_.rook_wo_pawns_base   = j["pp_adj"][  "rook_wo_pawns_base"];
+
+  pp_adj_.knight_wo_pawns_d = j["pp_adj"]["knight_wo_pawns_d"];
+  pp_adj_.rook_wo_pawns_d   = j["pp_adj"][  "rook_wo_pawns_d"];
+
   return true;
 }
 
 // The general idea comes from Fruit.
-void parameters::pcsq_init()
+void parameters::pcsq::init()
 {
-  using namespace detail;
+  for (auto &e :     pawn_file_base)  clamp(e, -20, 20);
+  for (auto &e : knight_centre_base)  clamp(e, -20, 20);
+  for (auto &e :   knight_rank_base)  clamp(e, -20, 20);
+  for (auto &e : bishop_centre_base)  clamp(e, -20, 20);
+  for (auto &e :     rook_file_base)  clamp(e, -20, 20);
+  for (auto &e :  queen_centre_base)  clamp(e, -20, 20);
+  for (auto &e :   king_centre_base)  clamp(e, -20, 20);
+  for (auto &e :     king_file_base)  clamp(e, -20, 20);
+  for (auto &e :     king_rank_base)  clamp(e, -20, 20);
 
-  for (auto &e :     pcsq_.pawn_file_base)  clamp(e, -20, 20);
-  for (auto &e : pcsq_.knight_centre_base)  clamp(e, -20, 20);
-  for (auto &e :   pcsq_.knight_rank_base)  clamp(e, -20, 20);
-  for (auto &e : pcsq_.bishop_centre_base)  clamp(e, -20, 20);
-  for (auto &e :     pcsq_.rook_file_base)  clamp(e, -20, 20);
-  for (auto &e :  pcsq_.queen_centre_base)  clamp(e, -20, 20);
-  for (auto &e :   pcsq_.king_centre_base)  clamp(e, -20, 20);
-  for (auto &e :     pcsq_.king_file_base)  clamp(e, -20, 20);
-  for (auto &e :     pcsq_.king_rank_base)  clamp(e, -20, 20);
+  clamp(      pawn_file_mult_m, 1, 10);
+  clamp(  knight_centre_mult_e, 1, 10);
+  clamp(  knight_centre_mult_m, 1, 10);
+  clamp(    knight_rank_mult_m, 1, 10);
+  clamp(  bishop_centre_mult_e, 1, 10);
+  clamp(  bishop_centre_mult_m, 1, 10);
+  clamp(      rook_file_mult_m, 1, 10);
+  clamp(   queen_centre_mult_e, 1, 10);
+  clamp(   queen_centre_mult_m, 1, 10);
+  clamp(    king_centre_mult_e, 1, 20);
+  clamp(      king_file_mult_m, 1, 20);
+  clamp(      king_rank_mult_m, 1, 20);
 
-  clamp(      pcsq_.pawn_file_mult_m, 1, 10);
-  clamp(  pcsq_.knight_centre_mult_e, 1, 10);
-  clamp(  pcsq_.knight_centre_mult_m, 1, 10);
-  clamp(    pcsq_.knight_rank_mult_m, 1, 10);
-  clamp(  pcsq_.bishop_centre_mult_e, 1, 10);
-  clamp(  pcsq_.bishop_centre_mult_m, 1, 10);
-  clamp(      pcsq_.rook_file_mult_m, 1, 10);
-  clamp(   pcsq_.queen_centre_mult_e, 1, 10);
-  clamp(   pcsq_.queen_centre_mult_m, 1, 10);
-  clamp(    pcsq_.king_centre_mult_e, 1, 20);
-  clamp(      pcsq_.king_file_mult_m, 1, 20);
-  clamp(      pcsq_.king_rank_mult_m, 1, 20);
+  clamp(knight_backrank_base_m, 0,  20);
+  clamp( knight_trapped_base_m, 0, 120);
+  clamp(bishop_backrank_base_m, 0,  20);
+  clamp(bishop_diagonal_base_m, 0,  20);
+  clamp( queen_backrank_base_m, 0,  20);
 
-  clamp(pcsq_.knight_backrank_base_m, 0,  20);
-  clamp( pcsq_.knight_trapped_base_m, 0, 120);
-  clamp(pcsq_.bishop_backrank_base_m, 0,  20);
-  clamp(pcsq_.bishop_diagonal_base_m, 0,  20);
-  clamp( pcsq_.queen_backrank_base_m, 0,  20);
-
-  clamp( pcsq_.pawn_weight, 0, 200);
-  clamp(pcsq_.piece_weight, 0, 200);
-  clamp( pcsq_.king_weight, 0, 200);
+  clamp( pawn_weight, 0, 200);
+  clamp(piece_weight, 0, 200);
+  clamp( king_weight, 0, 200);
 
   // # PAWNS
   // ## File
   for (square i(0); i < 64; ++i)
   {
     const auto f(file(i) < 4 ? file(i) : 7 - file(i));
-    pcsq_m_[WPAWN.id()][i] += pcsq_.pawn_file_base[f] * pcsq_.pawn_file_mult_m;
+    mg[WPAWN.id()][i] += pawn_file_base[f] * pawn_file_mult_m;
   }
 
   // ## Centre control
-  pcsq_m_[WPAWN.id()][D3] += 10;
-  pcsq_m_[WPAWN.id()][E3] += 10;
+  mg[WPAWN.id()][D3] += 10;
+  mg[WPAWN.id()][E3] += 10;
 
-  pcsq_m_[WPAWN.id()][D4] += 20;
-  pcsq_m_[WPAWN.id()][E4] += 20;
+  mg[WPAWN.id()][D4] += 20;
+  mg[WPAWN.id()][E4] += 20;
 
-  pcsq_m_[WPAWN.id()][D5] += 10;
-  pcsq_m_[WPAWN.id()][E5] += 10;
+  mg[WPAWN.id()][D5] += 10;
+  mg[WPAWN.id()][E5] += 10;
 
   // ## Weight
   for (square i(0); i < 64; ++i)
   {
-    pcsq_m_[WPAWN.id()][i] *= pcsq_.pawn_weight;
-    pcsq_m_[WPAWN.id()][i] /=               100;
+    mg[WPAWN.id()][i] *= pawn_weight;
+    mg[WPAWN.id()][i] /=         100;
 
-    pcsq_e_[WPAWN.id()][i] *= pcsq_.pawn_weight;
-    pcsq_e_[WPAWN.id()][i] /=               100;
+    eg[WPAWN.id()][i] *= pawn_weight;
+    eg[WPAWN.id()][i] /=         100;
   }
 
   // # KNIGHTS
@@ -216,34 +225,32 @@ void parameters::pcsq_init()
     const auto f(file(i) < 4 ? file(i) : 7 - file(i));
     const auto r(rank(i) < 4 ? rank(i) : 7 - rank(i));
 
-    const auto knight_centre(pcsq_.knight_centre_base[f]
-                             + pcsq_.knight_centre_base[r]);
+    const auto knight_centre(knight_centre_base[f] + knight_centre_base[r]);
 
-    pcsq_m_[WKNIGHT.id()][i] += knight_centre * pcsq_.knight_centre_mult_m;
-    pcsq_e_[WKNIGHT.id()][i] += knight_centre * pcsq_.knight_centre_mult_e;
+    mg[WKNIGHT.id()][i] += knight_centre * knight_centre_mult_m;
+    eg[WKNIGHT.id()][i] += knight_centre * knight_centre_mult_e;
   }
 
   // ## Rank
   for (square i(0); i < 64; ++i)
-    pcsq_m_[WKNIGHT.id()][i] += pcsq_.knight_rank_base[rank(i)]
-                                * pcsq_.knight_rank_mult_m;
+    mg[WKNIGHT.id()][i] += knight_rank_base[rank(i)] * knight_rank_mult_m;
 
   // ## Back rank
   for (square i(A1); i <= H1; ++i)
-    pcsq_m_[WKNIGHT.id()][i] -= pcsq_.knight_backrank_base_m;
+    mg[WKNIGHT.id()][i] -= knight_backrank_base_m;
 
   // ## "Trapped"
-  pcsq_m_[WKNIGHT.id()][A8] -= pcsq_.knight_trapped_base_m;
-  pcsq_m_[WKNIGHT.id()][H8] -= pcsq_.knight_trapped_base_m;
+  mg[WKNIGHT.id()][A8] -= knight_trapped_base_m;
+  mg[WKNIGHT.id()][H8] -= knight_trapped_base_m;
 
   // ## Weight
   for (square i(0); i < 64; ++i)
   {
-    pcsq_m_[WKNIGHT.id()][i] *= pcsq_.piece_weight;
-    pcsq_m_[WKNIGHT.id()][i] /=                100;
+    mg[WKNIGHT.id()][i] *= piece_weight;
+    mg[WKNIGHT.id()][i] /=          100;
 
-    pcsq_e_[WKNIGHT.id()][i] *= pcsq_.piece_weight;
-    pcsq_e_[WKNIGHT.id()][i] /=                100;
+    eg[WKNIGHT.id()][i] *= piece_weight;
+    eg[WKNIGHT.id()][i] /=          100;
   }
 
   // # BISHOPS
@@ -253,45 +260,44 @@ void parameters::pcsq_init()
     const auto f(file(i) < 4 ? file(i) : 7 - file(i));
     const auto r(rank(i) < 4 ? rank(i) : 7 - rank(i));
 
-    const auto bishop_centre(pcsq_.bishop_centre_base[f]
-                             + pcsq_.bishop_centre_base[r]);
+    const auto bishop_centre(bishop_centre_base[f] + bishop_centre_base[r]);
 
-    pcsq_m_[WBISHOP.id()][i] += bishop_centre * pcsq_.bishop_centre_mult_m;
+    mg[WBISHOP.id()][i] += bishop_centre * bishop_centre_mult_m;
 
-    pcsq_e_[WBISHOP.id()][i] += bishop_centre * pcsq_.bishop_centre_mult_e;
+    eg[WBISHOP.id()][i] += bishop_centre * bishop_centre_mult_e;
   }
 
   // ## Back rank
   for (square i(A1); i <= H1; ++i)
-    pcsq_m_[WBISHOP.id()][i] -= pcsq_.bishop_backrank_base_m;
+    mg[WBISHOP.id()][i] -= bishop_backrank_base_m;
 
   // ## Main diagonals
-  pcsq_m_[WBISHOP.id()][A1] += pcsq_.bishop_diagonal_base_m;
-  pcsq_m_[WBISHOP.id()][B2] += pcsq_.bishop_diagonal_base_m;
-  pcsq_m_[WBISHOP.id()][C3] += pcsq_.bishop_diagonal_base_m;
-  pcsq_m_[WBISHOP.id()][D4] += pcsq_.bishop_diagonal_base_m;
-  pcsq_m_[WBISHOP.id()][E5] += pcsq_.bishop_diagonal_base_m;
-  pcsq_m_[WBISHOP.id()][F6] += pcsq_.bishop_diagonal_base_m;
-  pcsq_m_[WBISHOP.id()][G7] += pcsq_.bishop_diagonal_base_m;
-  pcsq_m_[WBISHOP.id()][H8] += pcsq_.bishop_diagonal_base_m;
+  mg[WBISHOP.id()][A1] += bishop_diagonal_base_m;
+  mg[WBISHOP.id()][B2] += bishop_diagonal_base_m;
+  mg[WBISHOP.id()][C3] += bishop_diagonal_base_m;
+  mg[WBISHOP.id()][D4] += bishop_diagonal_base_m;
+  mg[WBISHOP.id()][E5] += bishop_diagonal_base_m;
+  mg[WBISHOP.id()][F6] += bishop_diagonal_base_m;
+  mg[WBISHOP.id()][G7] += bishop_diagonal_base_m;
+  mg[WBISHOP.id()][H8] += bishop_diagonal_base_m;
 
-  pcsq_m_[WBISHOP.id()][H1] += pcsq_.bishop_diagonal_base_m;
-  pcsq_m_[WBISHOP.id()][G2] += pcsq_.bishop_diagonal_base_m;
-  pcsq_m_[WBISHOP.id()][F3] += pcsq_.bishop_diagonal_base_m;
-  pcsq_m_[WBISHOP.id()][E4] += pcsq_.bishop_diagonal_base_m;
-  pcsq_m_[WBISHOP.id()][D5] += pcsq_.bishop_diagonal_base_m;
-  pcsq_m_[WBISHOP.id()][C6] += pcsq_.bishop_diagonal_base_m;
-  pcsq_m_[WBISHOP.id()][B7] += pcsq_.bishop_diagonal_base_m;
-  pcsq_m_[WBISHOP.id()][A8] += pcsq_.bishop_diagonal_base_m;
+  mg[WBISHOP.id()][H1] += bishop_diagonal_base_m;
+  mg[WBISHOP.id()][G2] += bishop_diagonal_base_m;
+  mg[WBISHOP.id()][F3] += bishop_diagonal_base_m;
+  mg[WBISHOP.id()][E4] += bishop_diagonal_base_m;
+  mg[WBISHOP.id()][D5] += bishop_diagonal_base_m;
+  mg[WBISHOP.id()][C6] += bishop_diagonal_base_m;
+  mg[WBISHOP.id()][B7] += bishop_diagonal_base_m;
+  mg[WBISHOP.id()][A8] += bishop_diagonal_base_m;
 
   // ## Weight
   for (square i(0); i < 64; ++i)
   {
-    pcsq_m_[WBISHOP.id()][i] *= pcsq_.piece_weight;
-    pcsq_m_[WBISHOP.id()][i] /=                100;
+    mg[WBISHOP.id()][i] *= piece_weight;
+    mg[WBISHOP.id()][i] /=          100;
 
-    pcsq_e_[WBISHOP.id()][i] *= pcsq_.piece_weight;
-    pcsq_e_[WBISHOP.id()][i] /=                100;
+    eg[WBISHOP.id()][i] *= piece_weight;
+    eg[WBISHOP.id()][i] /=          100;
   }
 
   // # ROOKS
@@ -299,17 +305,17 @@ void parameters::pcsq_init()
   for (square i(0); i < 64; ++i)
   {
     const auto f(file(i) < 4 ? file(i) : 7 - file(i));
-    pcsq_m_[WROOK.id()][i] += pcsq_.rook_file_base[f] * pcsq_.rook_file_mult_m;
+    mg[WROOK.id()][i] += rook_file_base[f] * rook_file_mult_m;
   }
 
   // ## Weight
   for (square i(0); i < 64; ++i)
   {
-    pcsq_m_[WROOK.id()][i] *= pcsq_.piece_weight;
-    pcsq_m_[WROOK.id()][i] /=                100;
+    mg[WROOK.id()][i] *= piece_weight;
+    mg[WROOK.id()][i] /=          100;
 
-    pcsq_e_[WROOK.id()][i] *= pcsq_.piece_weight;
-    pcsq_e_[WROOK.id()][i] /=                100;
+    eg[WROOK.id()][i] *= piece_weight;
+    eg[WROOK.id()][i] /=          100;
   }
 
   // # QUEENS
@@ -319,25 +325,24 @@ void parameters::pcsq_init()
     const auto f(file(i) < 4 ? file(i) : 7 - file(i));
     const auto r(rank(i) < 4 ? rank(i) : 7 - rank(i));
 
-    const auto queen_centre(pcsq_.queen_centre_base[f]
-                            + pcsq_.queen_centre_base[r]);
+    const auto queen_centre(queen_centre_base[f] + queen_centre_base[r]);
 
-    pcsq_m_[WQUEEN.id()][i] += queen_centre * pcsq_.queen_centre_mult_m;
-    pcsq_e_[WQUEEN.id()][i] += queen_centre * pcsq_.queen_centre_mult_e;
+    mg[WQUEEN.id()][i] += queen_centre * queen_centre_mult_m;
+    eg[WQUEEN.id()][i] += queen_centre * queen_centre_mult_e;
   }
 
   // ## Back rank
   for (square i(A1); i <= H1; ++i)
-    pcsq_m_[WQUEEN.id()][i] -= pcsq_.queen_backrank_base_m;
+    mg[WQUEEN.id()][i] -= queen_backrank_base_m;
 
   // ## Weight
   for (square i(0); i < 64; ++i)
   {
-    pcsq_m_[WQUEEN.id()][i] *= pcsq_.piece_weight;
-    pcsq_m_[WQUEEN.id()][i] /=                100;
+    mg[WQUEEN.id()][i] *= piece_weight;
+    mg[WQUEEN.id()][i] /=          100;
 
-    pcsq_e_[WQUEEN.id()][i] *= pcsq_.piece_weight;
-    pcsq_e_[WQUEEN.id()][i] /=                100;
+    eg[WQUEEN.id()][i] *= piece_weight;
+    eg[WQUEEN.id()][i] /=          100;
   }
 
   // # KINGS
@@ -347,32 +352,30 @@ void parameters::pcsq_init()
     const auto f(file(i) < 4 ? file(i) : 7 - file(i));
     const auto r(rank(i) < 4 ? rank(i) : 7 - rank(i));
 
-    const auto king_centre(pcsq_.king_centre_base[f]
-                           + pcsq_.king_centre_base[r]);
+    const auto king_centre(king_centre_base[f] + king_centre_base[r]);
 
-    pcsq_e_[WKING.id()][i] += king_centre * pcsq_.king_centre_mult_e;
+    eg[WKING.id()][i] += king_centre * king_centre_mult_e;
   }
 
   // ## File
   for (square i(0); i < 64; ++i)
   {
     const auto f(file(i) < 4 ? file(i) : 7 - file(i));
-    pcsq_m_[WKING.id()][i] += pcsq_.king_file_base[f] * pcsq_.king_file_mult_m;
+    mg[WKING.id()][i] += king_file_base[f] * king_file_mult_m;
   }
 
   // ## Rank
   for (square i(0); i < 64; ++i)
-    pcsq_m_[WKING.id()][i] += pcsq_.king_rank_base[rank(i)]
-                              * pcsq_.king_rank_mult_m;
+    mg[WKING.id()][i] += king_rank_base[rank(i)] * king_rank_mult_m;
 
   // ## Weight
   for (square i(0); i < 64; ++i)
   {
-    pcsq_m_[WKING.id()][i] *= pcsq_.king_weight;
-    pcsq_m_[WKING.id()][i] /=               100;
+    mg[WKING.id()][i] *= king_weight;
+    mg[WKING.id()][i] /=         100;
 
-    pcsq_e_[WKING.id()][i] *= pcsq_.piece_weight;
-    pcsq_e_[WKING.id()][i] /=                100;
+    eg[WKING.id()][i] *= piece_weight;
+    eg[WKING.id()][i] /=          100;
   }
 
   // Flipped copy for BLACK.
@@ -382,9 +385,25 @@ void parameters::pcsq_init()
       const auto pb(piece(BLACK, t).id());
       const auto pw(piece(WHITE, t).id());
 
-      pcsq_e_[pb][flip(i)] = pcsq_e_[pw][i];
-      pcsq_m_[pb][flip(i)] = pcsq_m_[pw][i];
+      eg[pb][flip(i)] = eg[pw][i];
+      mg[pb][flip(i)] = mg[pw][i];
     }
+}
+
+void parameters::pp_adj::init()
+{
+  clamp(knight_wo_pawns_base, -30,  0);
+  clamp(  rook_wo_pawns_base,   0, 30);
+  clamp(knight_wo_pawns_d,  0, 6);
+  clamp(  rook_wo_pawns_d, -6, 0);
+
+  n[0] = knight_wo_pawns_base;
+  r[0] =   rook_wo_pawns_base;
+  for (int i(1); i < 9; ++i)
+  {
+    n[i] = n[0] + knight_wo_pawns_d * i;
+    r[i] = n[0] +   rook_wo_pawns_d * i;
+  }
 }
 
 }  // namespace testudo

@@ -75,7 +75,7 @@ private:
     {-11, -10,  -9, -1, 1,  9, 10, 11}
   };
 
-  static constexpr score value_[empty+1] = {100, 2000, 345, 355, 525, 1000, 0};
+  static constexpr score value_[empty+1] = {100, 2000, 325, 325, 500, 1000, 0};
 
   ID id_;
 };

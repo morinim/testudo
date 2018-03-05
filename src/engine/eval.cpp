@@ -61,16 +61,32 @@ int phase256(const state &s)
 }
 
 score_vector::score_vector(const state &s)
-  : phase(), material{0, 0}, pcsq_e{0, 0}, pcsq_m{0, 0}
+  : phase(), material{0, 0}, adjust_material{0, 0}, pcsq_e{0, 0}, pcsq_m{0, 0}
 {
   eval_e(s, *this);
   eval_m(s, *this);
 
   for (square i(0); i < 64; ++i)
     if (s[i] != EMPTY)
-    {
       material[s[i].color()] += s[i].value();
-    }
+
+  // Adjusting material value for the various combinations of pieces.
+  for (unsigned c(BLACK); c <= WHITE; ++c)
+  {
+    const auto pawns(  s.piece_count(c,   piece::pawn));
+    const auto knights(s.piece_count(c, piece::knight));
+    const auto rooks(  s.piece_count(c,   piece::rook));
+
+    if (s.piece_count(c, piece::bishop) > 1)
+      adjust_material[c] += db.bishop_pair();
+    if (knights > 1)
+      adjust_material[c] += db.knight_pair();
+    if (rooks > 1)
+      adjust_material[c] += db.rook_pair();
+
+    adjust_material[c] += db.n_adj(pawns) * knights;
+    adjust_material[c] += db.r_adj(pawns) *   rooks;
+  }
 
   // The, so called, tapered eval: a technique used in evaluation to make a
   // smooth transition between the phases of the game using a fine grained
@@ -91,6 +107,7 @@ score eval(const state &s)
 
   return
     e.material[s.side()] - e.material[!s.side()]
+    + e.adjust_material[s.side()] - e.adjust_material[!s.side()]
     + (em * (256 - e.phase) + ee * e.phase) / 256;
 }
 
