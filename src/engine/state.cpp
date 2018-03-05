@@ -71,11 +71,6 @@ const std::size_t mailbox64[/* here goes a `square` */] =
   91, 92, 93, 94, 95, 96, 97, 98
 };
 
-const std::array<int, 2> pawn_capture[2] =
-{
-  {{9, 11}}, {{-11, -9}}
-};
-
 // Forward moving offset for a Pawn of a specific color.
 const int pawn_fwd[2] = {8, -8};
 
@@ -305,7 +300,7 @@ void state::process_pawn_captures(F f, square i) const
 {
   assert(board_[i] == piece(side(), piece::pawn));
 
-  for (auto delta : pawn_capture[side()])
+  for (auto delta : board_[i].offsets())
   {
     const auto to(mailbox[mailbox64[i] + delta]);
 
@@ -318,7 +313,7 @@ template<class F>
 void state::process_en_passant(F f) const
 {
   if (valid(en_passant()))
-    for (auto delta : pawn_capture[side()])
+    for (auto delta : piece(side(), piece::pawn).offsets())
     {
       const auto from(mailbox[mailbox64[ep_] - delta]);
 
@@ -503,7 +498,7 @@ bool state::attack(square target, color attacker) const
     {
       if (p.type() == piece::pawn)
       {
-        for (auto delta : pawn_capture[attacker])
+        for (auto delta : p.offsets())
           if (mailbox[mailbox64[i] + delta] == target)
             return true;
       }

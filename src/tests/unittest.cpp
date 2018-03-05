@@ -232,8 +232,8 @@ TEST_CASE("piece")
   CHECK(  !BKING.slide());
   CHECK(  !WKING.slide());
 
-  CHECK(BPAWN.offsets().size()   == 0);
-  CHECK(WPAWN.offsets().size()   == 0);
+  CHECK(BPAWN.offsets().size()   == 2);
+  CHECK(WPAWN.offsets().size()   == 2);
   CHECK(BKNIGHT.offsets().size() == 8);
   CHECK(WKNIGHT.offsets().size() == 8);
   CHECK(BBISHOP.offsets().size() == 4);

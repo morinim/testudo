@@ -58,16 +58,16 @@ public:
 private:
   static constexpr std::initializer_list<int> offsets_[sup_id] =
   {
-    {},
+    {  9,  11},  // just the captures... pawns are special
     {-11, -10,  -9, -1, 1,  9, 10, 11},
     {-21, -19, -12, -8, 8, 12, 19, 21},
     {-11,  -9,   9, 11},
     {-10,  -1,   1, 10},
     {-11, -10,  -9, -1, 1,  9, 10, 11},
 
-    {}, {},  // unused slots
+    {}, {},      // unused slots
 
-    {},
+    {-11,  -9},  // just the captures... pawns are special
     {-11, -10,  -9, -1, 1,  9, 10, 11},
     {-21, -19, -12, -8, 8, 12, 19, 21},
     {-11,  -9,   9, 11},

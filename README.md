@@ -19,9 +19,10 @@ It's distributed under the [Mozilla Public License v2.0][2] (see the accompanyin
 
 ## Features
 
-- 10x12 mailbox board representation (piece type and colour encoding) 
+- 10x12 mailbox board representation (piece type and colour encoding)
 - Alpha-beta with aspiration search
 - Quiescence search
+- MVV-LVA, killer moves
 - Evaluation based on material, piece square tables
 - [CECP v2][4] support
 

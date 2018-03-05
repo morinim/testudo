@@ -35,7 +35,7 @@ std::chrono::seconds bench()
     {
       // Bratko-Kopec 2
       state("3r1k2/4npp1/1ppr3p/p6P/P2PPPP1/1NR5/5K2/2R5 w - -"),
-      8
+      9
     },
     {
       // Bratko-Kopec 4
