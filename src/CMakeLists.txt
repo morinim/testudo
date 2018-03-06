@@ -35,6 +35,7 @@ add_compile_options(${OTHER_FLAGS} ${WARN_FLAGS})
 # Compiler must support the C++14 standard.
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 include_directories(${TESTUDO_SOURCE_DIR})
 include_directories(SYSTEM ${TESTUDO_SOURCE_DIR}/thirdparty/)
@@ -43,4 +44,6 @@ include_directories(SYSTEM ${TESTUDO_SOURCE_DIR}/thirdparty/)
 # another cmake executable to run. The same process will walk through the
 # project's entire directory structure).
 add_subdirectory(engine)
+
+enable_testing()
 add_subdirectory(tests)

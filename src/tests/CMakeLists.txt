@@ -6,3 +6,5 @@ foreach (test_src ${TESTS_SRC})
   add_executable(${test} ${test_src})
   target_link_libraries(${test} testudo_lib)
 endforeach()
+
+add_test(NAME UnitTests COMMAND unittest)
