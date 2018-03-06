@@ -1,6 +1,6 @@
 dist: trusty
 language: cpp
-sudo: required
+sudo: false
 
 
 notifications:
@@ -19,12 +19,8 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-7
-            - g++-7-multilib
-            - g++-multilib
-            - expect
       env:
-        - COMPILER=g++-7
-        - COMP=gcc
+        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
 
     - os: linux
       compiler: clang++
@@ -36,12 +32,8 @@ matrix:
           packages:
             - clang-5.0
             - llvm-5.0-dev
-            - g++-multilib
-            - expect
       env:
-        - COMPILER=clang++-5.0
-        - COMP=clang
-        - LDFLAGS=-fuse-ld=gold
+        - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
 
     - os: osx
       compiler: clang++
@@ -50,12 +42,16 @@ matrix:
         - COMP=clang
 
 
+before_install:
+  - eval "${MATRIX_EVAL}"
+
+
 before_script:
 - cd src
 - mkdir build
 - cd build
-- cmake --version
 - cmake ..
+
 
 script:
 - make
