@@ -87,7 +87,7 @@ private:
   { return h & (tt_.size() - 1); }
 
   std::vector<std::pair<slot, slot>> tt_;
-  decltype(slot::age_) age_;
+  decltype(slot().age()) age_;
 };
 
 }  // namespace testudo
