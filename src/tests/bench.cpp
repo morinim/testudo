@@ -45,7 +45,7 @@ std::chrono::seconds bench()
     {
       // Bratko-Kopec 8
       state("4b3/p3kp2/6p1/3pP2p/2pP1P2/4K1P1/P3N2P/8 w - -"),
-      12
+      13
     },
     {
       // Bratko-Kopec 12
@@ -60,7 +60,7 @@ std::chrono::seconds bench()
     {
       // Bratko-Kopec 23
       state("r1bqk2r/pp2bppp/2p5/3pP3/P2Q1P2/2N1B3/1PP3PP/R4RK1 b kq -"),
-      7
+      8
     }
   });
 
