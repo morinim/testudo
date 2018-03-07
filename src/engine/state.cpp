@@ -490,34 +490,29 @@ bool state::is_legal(const move &m) const
 
 bool state::attack(square target, color attacker) const
 {
-  for (square i(0); i < 64; ++i)
-  {
-    const piece p(board_[i]);
-
-    if (p.color() == attacker)
+  for (unsigned p(piece::pawn); p <= piece::knight; ++p)
+    for (auto delta : piece(!attacker, p).offsets())
     {
-      if (p.type() == piece::pawn)
-      {
-        for (auto delta : p.offsets())
-          if (mailbox[mailbox64[i] + delta] == target)
-            return true;
-      }
-      else
-      {
-        for (auto delta : p.offsets())
-          for (square to(mailbox[mailbox64[i] + delta]);
-               valid(to);
-               to = mailbox[mailbox64[to] + delta])
-          {
-            if (to == target)
-              return true;
+      const auto from(mailbox[mailbox64[target] + delta]);
 
-            if (board_[to] != EMPTY || !p.slide())
-              break;
-          }
-      }
+      if (valid(from) && board_[from] == piece(attacker, p))
+        return true;
     }
-  }
+
+  for (unsigned p(piece::bishop); p <= piece::rook; ++p)
+    for (auto delta : piece(attacker, p).offsets())
+      for (square from(mailbox[mailbox64[target] + delta]);
+           valid(from);
+           from = mailbox[mailbox64[from] + delta])
+
+      {
+        if (board_[from] == piece(attacker, p)
+            || board_[from] == piece(attacker, piece::queen))
+          return true;
+
+        if (board_[from] != EMPTY)
+          break;
+    }
 
   return false;
 }
