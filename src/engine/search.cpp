@@ -135,6 +135,7 @@ move move_provider::next(const std::pair<move, move> &killers)
   case stage::move_gen:
     stage_ = stage::others;
     move_gen();
+    // fall through
 
   default:
     if (start_ == moves_.end())
