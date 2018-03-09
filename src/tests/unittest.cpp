@@ -547,21 +547,6 @@ TEST_CASE("search_with_no_move_available")
 
 TEST_SUITE("ADVANCED" * doctest::skip())
 {
-/*
-TEST_CASE("search")
-{
-  const state p1(
-    "8/8/8/8/k7/8/5KP1/1Q6 w - - 1 63");
-
-  cache tt;
-  search s({p1}, &tt);
-
-  s.max_time = std::chrono::milliseconds(3000000);
-
-  const move m(s.run(true));
-  std::cout << m << std::endl;
-}
-*/
 
 TEST_CASE("transposition_table")
 {
@@ -582,6 +567,19 @@ TEST_CASE("transposition_table")
 
   const move m(s.run(true));
   CHECK(m == move(A1, B1, 0));
+}
+
+TEST_CASE("quiescence_search_explosion")
+{
+  // See <http://www.talkchess.com/forum/viewtopic.php?t=63590>
+  const state p("1QqQqQq1/r6Q/Q6q/q6Q/B2q4/q6Q/k6K/1qQ1QqRb w - -");
+
+  cache tt;
+  search s({p}, &tt);
+  s.max_depth = 1;
+
+  const move m(s.run(true));
+  CHECK(m);
 }
 
 }  // TEST_SUITE "ADVANCED"

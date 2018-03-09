@@ -13,6 +13,7 @@
 
 #include "piece.h"
 #include "score.h"
+#include "thirdparty/json.hpp"
 
 namespace testudo
 {
@@ -54,7 +55,7 @@ private:
     score bishop_centre_mult_e =  3;
     score bishop_centre_mult_m =  2;
     score rook_file_mult_m     =  3;
-    score queen_centre_mult_e  =  4;
+    score queen_centre_mult_e  =  4;  // [0; 10]
     score queen_centre_mult_m  =  0;
     score king_centre_mult_e   = 12;  // [1; 20]
     score king_file_mult_m     = 10;
@@ -81,6 +82,8 @@ private:
     score king_weight  = 100;
 
     void init();
+    bool load(const nlohmann::json &);
+    void save(nlohmann::json &) const;
 
     // Piece/square tables for opening/middle-game (`mg`) and end-game (`eg`).
     //
@@ -89,6 +92,9 @@ private:
     // optimization.
     score mg[piece::sup_id][64];
     score eg[piece::sup_id][64];
+
+  private:
+    static const std::string sec_name;
   } pcsq_;
 
   score bishop_pair_ =  30;  // [  0; 50]
@@ -105,9 +111,14 @@ private:
     score rook_wo_pawns_d    = -3;  // [-6; 0]
 
     void init();
+    bool load(const nlohmann::json &);
+    void save(nlohmann::json &) const;
 
     score n[9];
     score r[9];
+
+  private:
+    static const std::string sec_name;
   } pp_adj_;
 };  // class parameters
 

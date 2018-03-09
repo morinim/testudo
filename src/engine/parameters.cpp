@@ -12,8 +12,7 @@
 #include <fstream>
 
 #include "parameters.h"
-
-#include "thirdparty/json.hpp"
+#include "log.h"
 
 namespace testudo
 {
@@ -33,11 +32,17 @@ void clamp(T &v, const T &lo, const T &hi)
 
 }  // unnamed namespace
 
+const std::string parameters::pcsq::sec_name   =   "pcsq";
+const std::string parameters::pp_adj::sec_name = "pp_adj";
+
 parameters db;
 
 parameters::parameters()
 {
-  load();
+  if (!load())
+  {
+    testudoINFO << "Using default values for some/all parameters";
+  }
 
   pcsq_.init();
   pp_adj_.init();
@@ -45,50 +50,15 @@ parameters::parameters()
 
 bool parameters::save() const
 {
-  using json = nlohmann::json;
-  json j;
+  nlohmann::json j;
 
-  j["pcsq"]["pawn_file_base"]         = pcsq_.pawn_file_base;
-  j["pcsq"]["knight_centre_base"]     = pcsq_.knight_centre_base;
-  j["pcsq"]["knight_rank_base"]       = pcsq_.knight_rank_base;
-  j["pcsq"]["bishop_centre_base"]     = pcsq_.bishop_centre_base;
-  j["pcsq"]["rook_file_base"]         = pcsq_.rook_file_base;
-  j["pcsq"]["queen_centre_base"]      = pcsq_.queen_centre_base;
-  j["pcsq"]["king_centre_base"]       = pcsq_.king_centre_base;
-  j["pcsq"]["king_file_base"]         = pcsq_.king_file_base;
-  j["pcsq"]["king_rank_base"]         = pcsq_.king_rank_base;
-
-  j["pcsq"]["pawn_file_mult_m"]       = pcsq_.pawn_file_mult_m;
-  j["pcsq"]["knight_centre_mult_e"]   = pcsq_.knight_centre_mult_e;
-  j["pcsq"]["knight_centre_mult_m"]   = pcsq_.knight_centre_mult_m;
-  j["pcsq"]["knight_rank_mult_m"]     = pcsq_.knight_rank_mult_m;
-  j["pcsq"]["bishop_centre_mult_e"]   = pcsq_.bishop_centre_mult_e;
-  j["pcsq"]["bishop_centre_mult_m"]   = pcsq_.bishop_centre_mult_m;
-  j["pcsq"]["rook_file_mult_m"]       = pcsq_.rook_file_mult_m;
-  j["pcsq"]["queen_centre_mult_e"]    = pcsq_.queen_centre_mult_e;
-  j["pcsq"]["queen_centre_mult_m"]    = pcsq_.queen_centre_mult_m;
-  j["pcsq"]["king_centre_mult_e"]     = pcsq_.king_centre_mult_e;
-  j["pcsq"]["king_file_mult_m"]       = pcsq_.king_file_mult_m;
-  j["pcsq"]["king_rank_mult_m"]       = pcsq_.king_rank_mult_m;
-
-  j["pcsq"]["knight_backrank_base_m"] = pcsq_.knight_backrank_base_m;
-  j["pcsq"]["knight_trapped_base_m"]  = pcsq_.knight_trapped_base_m;
-  j["pcsq"]["bishop_backrank_base_m"] = pcsq_.bishop_backrank_base_m;
-  j["pcsq"]["bishop_diagonal_base_m"] = pcsq_.bishop_diagonal_base_m;
-  j["pcsq"]["queen_backrank_base_m"]  = pcsq_.queen_backrank_base_m;
-  j["pcsq"]["pawn_weight"]            = pcsq_.pawn_weight;
-  j["pcsq"]["piece_weight"]           = pcsq_.piece_weight;
-  j["pcsq"]["king_weight"]            = pcsq_.king_weight;
+  pcsq_.save(j);
 
   j["material"]["bishop_pair"] = bishop_pair_;
   j["material"]["knight_pair"] = knight_pair_;
   j["material"]["rook_pair"]   =   rook_pair_;
 
-  j["pp_adj"]["knight_wo_pawns_base"] = pp_adj_.knight_wo_pawns_base;
-  j["pp_adj"][  "rook_wo_pawns_base"] =   pp_adj_.rook_wo_pawns_base;
-
-  j["pp_adj"]["knight_wo_pawns_d"] = pp_adj_.knight_wo_pawns_d;
-  j["pp_adj"][  "rook_wo_pawns_d"] =   pp_adj_.rook_wo_pawns_d;
+  pp_adj_.save(j);
 
   std::ofstream f("testudo.json");
   return !!f && f << j;
@@ -100,42 +70,16 @@ bool parameters::load()
   if (!f)
     return false;
 
-  using json = nlohmann::json;
-  json j;
+  nlohmann::json j;
   if (!(f >> j))
     return false;
 
-  pcsq_.pawn_file_base         = j["pcsq"]["pawn_file_base"];
-  pcsq_.knight_centre_base     = j["pcsq"]["knight_centre_base"];
-  pcsq_.knight_rank_base       = j["pcsq"]["knight_rank_base"];
-  pcsq_.bishop_centre_base     = j["pcsq"]["bishop_centre_base"];
-  pcsq_.rook_file_base         = j["pcsq"]["rook_file_base"];
-  pcsq_.queen_centre_base      = j["pcsq"]["queen_centre_base"];
-  pcsq_.king_centre_base       = j["pcsq"]["king_centre_base"];
-  pcsq_.king_file_base         = j["pcsq"]["king_file_base"];
-  pcsq_.king_rank_base         = j["pcsq"]["king_rank_base"];
-
-  pcsq_.pawn_file_mult_m       = j["pcsq"]["pawn_file_mult_m"];
-  pcsq_.knight_centre_mult_e   = j["pcsq"]["knight_centre_mult_e"];
-  pcsq_.knight_centre_mult_m   = j["pcsq"]["knight_centre_mult_m"];
-  pcsq_.knight_rank_mult_m     = j["pcsq"]["knight_rank_mult_m"];
-  pcsq_.bishop_centre_mult_e   = j["pcsq"]["bishop_centre_mult_e"];
-  pcsq_.bishop_centre_mult_m   = j["pcsq"]["bishop_centre_mult_m"];
-  pcsq_.rook_file_mult_m       = j["pcsq"]["rook_file_mult_m"];
-  pcsq_.queen_centre_mult_e    = j["pcsq"]["queen_centre_mult_e"];
-  pcsq_.queen_centre_mult_m    = j["pcsq"]["queen_centre_mult_m"];
-  pcsq_.king_centre_mult_e     = j["pcsq"]["king_centre_mult_e"];
-  pcsq_.king_file_mult_m       = j["pcsq"]["king_file_mult_m"];
-  pcsq_.king_rank_mult_m       = j["pcsq"]["king_rank_mult_m"];
-
-  pcsq_.knight_backrank_base_m = j["pcsq"]["knight_backrank_base_m"];
-  pcsq_.knight_trapped_base_m  = j["pcsq"]["knight_trapped_base_m"];
-  pcsq_.bishop_backrank_base_m = j["pcsq"]["bishop_backrank_base_m"];
-  pcsq_.bishop_diagonal_base_m = j["pcsq"]["bishop_diagonal_base_m"];
-  pcsq_.queen_backrank_base_m  = j["pcsq"]["queen_backrank_base_m"];
-  pcsq_.pawn_weight            = j["pcsq"]["pawn_weight"];
-  pcsq_.piece_weight           = j["pcsq"]["piece_weight"];
-  pcsq_.king_weight            = j["pcsq"]["king_weight"];
+  if (!pcsq_.load(j))
+  {
+    testudoWARNING << "Partial initialization of the parameters "
+                      "(missing 'pcsq' section)";
+    return false;
+  }
 
   bishop_pair_ = j["material"]["bishop_pair"];
   knight_pair_ = j["material"]["knight_pair"];
@@ -145,11 +89,12 @@ bool parameters::load()
   clamp(knight_pair_, -20, 20);
   clamp(  rook_pair_, -30, 30);
 
-  pp_adj_.knight_wo_pawns_base = j["pp_adj"]["knight_wo_pawns_base"];
-  pp_adj_.rook_wo_pawns_base   = j["pp_adj"][  "rook_wo_pawns_base"];
-
-  pp_adj_.knight_wo_pawns_d = j["pp_adj"]["knight_wo_pawns_d"];
-  pp_adj_.rook_wo_pawns_d   = j["pp_adj"][  "rook_wo_pawns_d"];
+  if (!pp_adj_.load(j))
+  {
+    testudoWARNING << "Partial initialization of the parameters "
+                      "(missing 'pp_adj' section)";
+    return false;
+  }
 
   return true;
 }
@@ -157,39 +102,6 @@ bool parameters::load()
 // The general idea comes from Fruit.
 void parameters::pcsq::init()
 {
-  for (auto &e :     pawn_file_base)  clamp(e, -20, 20);
-  for (auto &e : knight_centre_base)  clamp(e, -20, 20);
-  for (auto &e :   knight_rank_base)  clamp(e, -20, 20);
-  for (auto &e : bishop_centre_base)  clamp(e, -20, 20);
-  for (auto &e :     rook_file_base)  clamp(e, -20, 20);
-  for (auto &e :  queen_centre_base)  clamp(e, -20, 20);
-  for (auto &e :   king_centre_base)  clamp(e, -20, 20);
-  for (auto &e :     king_file_base)  clamp(e, -20, 20);
-  for (auto &e :     king_rank_base)  clamp(e, -20, 20);
-
-  clamp(      pawn_file_mult_m, 1, 10);
-  clamp(  knight_centre_mult_e, 1, 10);
-  clamp(  knight_centre_mult_m, 1, 10);
-  clamp(    knight_rank_mult_m, 1, 10);
-  clamp(  bishop_centre_mult_e, 1, 10);
-  clamp(  bishop_centre_mult_m, 1, 10);
-  clamp(      rook_file_mult_m, 1, 10);
-  clamp(   queen_centre_mult_e, 1, 10);
-  clamp(   queen_centre_mult_m, 1, 10);
-  clamp(    king_centre_mult_e, 1, 20);
-  clamp(      king_file_mult_m, 1, 20);
-  clamp(      king_rank_mult_m, 1, 20);
-
-  clamp(knight_backrank_base_m, 0,  20);
-  clamp( knight_trapped_base_m, 0, 120);
-  clamp(bishop_backrank_base_m, 0,  20);
-  clamp(bishop_diagonal_base_m, 0,  20);
-  clamp( queen_backrank_base_m, 0,  20);
-
-  clamp( pawn_weight, 0, 200);
-  clamp(piece_weight, 0, 200);
-  clamp( king_weight, 0, 200);
-
   // # PAWNS
   // ## File
   for (square i(0); i < 64; ++i)
@@ -390,13 +302,111 @@ void parameters::pcsq::init()
     }
 }
 
+bool parameters::pcsq::load(const nlohmann::json &j)
+{
+  pawn_file_base         = j[sec_name]["pawn_file_base"];
+  knight_centre_base     = j[sec_name]["knight_centre_base"];
+  knight_rank_base       = j[sec_name]["knight_rank_base"];
+  bishop_centre_base     = j[sec_name]["bishop_centre_base"];
+  rook_file_base         = j[sec_name]["rook_file_base"];
+  queen_centre_base      = j[sec_name]["queen_centre_base"];
+  king_centre_base       = j[sec_name]["king_centre_base"];
+  king_file_base         = j[sec_name]["king_file_base"];
+  king_rank_base         = j[sec_name]["king_rank_base"];
+
+  pawn_file_mult_m       = j[sec_name]["pawn_file_mult_m"];
+  knight_centre_mult_e   = j[sec_name]["knight_centre_mult_e"];
+  knight_centre_mult_m   = j[sec_name]["knight_centre_mult_m"];
+  knight_rank_mult_m     = j[sec_name]["knight_rank_mult_m"];
+  bishop_centre_mult_e   = j[sec_name]["bishop_centre_mult_e"];
+  bishop_centre_mult_m   = j[sec_name]["bishop_centre_mult_m"];
+  rook_file_mult_m       = j[sec_name]["rook_file_mult_m"];
+  queen_centre_mult_e    = j[sec_name]["queen_centre_mult_e"];
+  queen_centre_mult_m    = j[sec_name]["queen_centre_mult_m"];
+  king_centre_mult_e     = j[sec_name]["king_centre_mult_e"];
+  king_file_mult_m       = j[sec_name]["king_file_mult_m"];
+  king_rank_mult_m       = j[sec_name]["king_rank_mult_m"];
+
+  knight_backrank_base_m = j[sec_name]["knight_backrank_base_m"];
+  knight_trapped_base_m  = j[sec_name]["knight_trapped_base_m"];
+  bishop_backrank_base_m = j[sec_name]["bishop_backrank_base_m"];
+  bishop_diagonal_base_m = j[sec_name]["bishop_diagonal_base_m"];
+  queen_backrank_base_m  = j[sec_name]["queen_backrank_base_m"];
+  pawn_weight            = j[sec_name]["pawn_weight"];
+  piece_weight           = j[sec_name]["piece_weight"];
+  king_weight            = j[sec_name]["king_weight"];
+
+  for (auto &e :     pawn_file_base)  clamp(e, -20, 20);
+  for (auto &e : knight_centre_base)  clamp(e, -20, 20);
+  for (auto &e :   knight_rank_base)  clamp(e, -20, 20);
+  for (auto &e : bishop_centre_base)  clamp(e, -20, 20);
+  for (auto &e :     rook_file_base)  clamp(e, -20, 20);
+  for (auto &e :  queen_centre_base)  clamp(e, -20, 20);
+  for (auto &e :   king_centre_base)  clamp(e, -20, 20);
+  for (auto &e :     king_file_base)  clamp(e, -20, 20);
+  for (auto &e :     king_rank_base)  clamp(e, -20, 20);
+
+  clamp(      pawn_file_mult_m, 1, 10);
+  clamp(  knight_centre_mult_e, 1, 10);
+  clamp(  knight_centre_mult_m, 1, 10);
+  clamp(    knight_rank_mult_m, 1, 10);
+  clamp(  bishop_centre_mult_e, 1, 10);
+  clamp(  bishop_centre_mult_m, 1, 10);
+  clamp(      rook_file_mult_m, 1, 10);
+  clamp(   queen_centre_mult_e, 0, 10);
+  clamp(   queen_centre_mult_m, 0, 10);
+  clamp(    king_centre_mult_e, 1, 20);
+  clamp(      king_file_mult_m, 1, 20);
+  clamp(      king_rank_mult_m, 1, 20);
+
+  std::cout << "Value at load: " << queen_centre_mult_m << std::endl;
+
+  clamp(knight_backrank_base_m, 0,  20);
+  clamp( knight_trapped_base_m, 0, 120);
+  clamp(bishop_backrank_base_m, 0,  20);
+  clamp(bishop_diagonal_base_m, 0,  20);
+  clamp( queen_backrank_base_m, 0,  20);
+
+  return true;
+}
+
+void parameters::pcsq::save(nlohmann::json &j) const
+{
+  j[sec_name]["pawn_file_base"]         = pawn_file_base;
+  j[sec_name]["knight_centre_base"]     = knight_centre_base;
+  j[sec_name]["knight_rank_base"]       = knight_rank_base;
+  j[sec_name]["bishop_centre_base"]     = bishop_centre_base;
+  j[sec_name]["rook_file_base"]         = rook_file_base;
+  j[sec_name]["queen_centre_base"]      = queen_centre_base;
+  j[sec_name]["king_centre_base"]       = king_centre_base;
+  j[sec_name]["king_file_base"]         = king_file_base;
+  j[sec_name]["king_rank_base"]         = king_rank_base;
+
+  j[sec_name]["pawn_file_mult_m"]       = pawn_file_mult_m;
+  j[sec_name]["knight_centre_mult_e"]   = knight_centre_mult_e;
+  j[sec_name]["knight_centre_mult_m"]   = knight_centre_mult_m;
+  j[sec_name]["knight_rank_mult_m"]     = knight_rank_mult_m;
+  j[sec_name]["bishop_centre_mult_e"]   = bishop_centre_mult_e;
+  j[sec_name]["bishop_centre_mult_m"]   = bishop_centre_mult_m;
+  j[sec_name]["rook_file_mult_m"]       = rook_file_mult_m;
+  j[sec_name]["queen_centre_mult_e"]    = queen_centre_mult_e;
+  j[sec_name]["queen_centre_mult_m"]    = queen_centre_mult_m;
+  j[sec_name]["king_centre_mult_e"]     = king_centre_mult_e;
+  j[sec_name]["king_file_mult_m"]       = king_file_mult_m;
+  j[sec_name]["king_rank_mult_m"]       = king_rank_mult_m;
+
+  j[sec_name]["knight_backrank_base_m"] = knight_backrank_base_m;
+  j[sec_name]["knight_trapped_base_m"]  = knight_trapped_base_m;
+  j[sec_name]["bishop_backrank_base_m"] = bishop_backrank_base_m;
+  j[sec_name]["bishop_diagonal_base_m"] = bishop_diagonal_base_m;
+  j[sec_name]["queen_backrank_base_m"]  = queen_backrank_base_m;
+  j[sec_name]["pawn_weight"]            = pawn_weight;
+  j[sec_name]["piece_weight"]           = piece_weight;
+  j[sec_name]["king_weight"]            = king_weight;
+}
+
 void parameters::pp_adj::init()
 {
-  clamp(knight_wo_pawns_base, -30,  0);
-  clamp(  rook_wo_pawns_base,   0, 30);
-  clamp(knight_wo_pawns_d,  0, 6);
-  clamp(  rook_wo_pawns_d, -6, 0);
-
   n[0] = knight_wo_pawns_base;
   r[0] =   rook_wo_pawns_base;
   for (int i(1); i < 9; ++i)
@@ -404,6 +414,31 @@ void parameters::pp_adj::init()
     n[i] = n[0] + knight_wo_pawns_d * i;
     r[i] = n[0] +   rook_wo_pawns_d * i;
   }
+}
+
+bool parameters::pp_adj::load(const nlohmann::json &j)
+{
+  knight_wo_pawns_base = j[sec_name]["knight_wo_pawns_base"];
+  rook_wo_pawns_base   = j[sec_name][  "rook_wo_pawns_base"];
+
+  knight_wo_pawns_d = j[sec_name]["knight_wo_pawns_d"];
+  rook_wo_pawns_d   = j[sec_name][  "rook_wo_pawns_d"];
+
+  clamp(knight_wo_pawns_base, -30,  0);
+  clamp(  rook_wo_pawns_base,   0, 30);
+  clamp(knight_wo_pawns_d,  0, 6);
+  clamp(  rook_wo_pawns_d, -6, 0);
+
+  return true;
+}
+
+void parameters::pp_adj::save(nlohmann::json &j) const
+{
+  j[sec_name]["knight_wo_pawns_base"] = knight_wo_pawns_base;
+  j[sec_name][  "rook_wo_pawns_base"] =   rook_wo_pawns_base;
+
+  j[sec_name]["knight_wo_pawns_d"] = knight_wo_pawns_d;
+  j[sec_name][  "rook_wo_pawns_d"] =   rook_wo_pawns_d;
 }
 
 }  // namespace testudo

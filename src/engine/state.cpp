@@ -512,7 +512,7 @@ bool state::attack(square target, color attacker) const
 
         if (board_[from] != EMPTY)
           break;
-    }
+      }
 
   return false;
 }

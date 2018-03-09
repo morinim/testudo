@@ -243,6 +243,12 @@ score search::quiesce(const state &s, score alpha, score beta)
 
   ++stats.qnodes;
 
+  // The static evaluation is a "stand-pat" score (the term is taken from the
+  // game of poker, where it denotes playing one's hand without drawing more
+  // cards) and is used to establish a lower bound on the score.
+  // Assuming we aren't in zugzwang, this is theoretically sound because we can
+  // assume that there is at least one move that can either match or beat the
+  // lower bound.
   score x(eval(s));
 
   if (x >= beta)
