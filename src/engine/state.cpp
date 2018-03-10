@@ -558,7 +558,7 @@ void state::fill_square(piece p, square i)
 
 bool state::make_move(const move &m)
 {
-  assert (!m.is_sentry());
+  assert (m);
 
   const color xside(!side());
 

@@ -17,7 +17,7 @@ namespace testudo
 // Move in coordinate notation (g1f3, a7a8q).
 std::ostream &operator<<(std::ostream &o, const move &m)
 {
-  if (m.is_sentry())
+  if (!m)
     return o << '-';
 
   std::ostringstream ss;

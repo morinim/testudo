@@ -25,7 +25,7 @@ inline constexpr void cache::slot::save(hash_t h, move m, int d, score_type t,
   assert(v <= std::numeric_limits<decltype(value_)>::max());
 
   // Preserve any existing move for the same position.
-  if (!m.is_sentry() || hash_ != h)
+  if (m || hash_ != h)
     best_move_ = m;
 
   hash_  = h;

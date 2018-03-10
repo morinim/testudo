@@ -38,6 +38,8 @@ struct move
   static constexpr move sentry() noexcept { return move(0, 0, 0); }
   constexpr bool is_sentry() const noexcept { return from == to; }
 
+  constexpr explicit operator bool() const noexcept { return !is_sentry(); }
+
   square    from;
   square      to;
   flags_t  flags;  // capture, castle, en passant, pushing a pawn two squares,
@@ -52,10 +54,6 @@ inline constexpr bool operator==(const move &lhs, const move &rhs) noexcept
 inline constexpr bool operator!=(const move &lhs, const move &rhs) noexcept
 {
   return !(lhs == rhs);
-}
-inline constexpr bool operator!(const move &m) noexcept
-{
-  return m.is_sentry();
 }
 
 inline constexpr enum piece::type move::promote() const noexcept

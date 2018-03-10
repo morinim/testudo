@@ -62,8 +62,7 @@ constexpr int move_provider::SORT_KILLER;
 move_provider::move_provider(const state &s, const cache::slot *entry)
   : s_(s), stage_(stage::hash), from_cache_(move::sentry()), moves_(), start_()
 {
-  if (entry && !entry->best_move().is_sentry()
-      && s_.is_legal(entry->best_move()))
+  if (entry && entry->best_move() && s_.is_legal(entry->best_move()))
     from_cache_ = entry->best_move();
   else
   {
@@ -77,7 +76,7 @@ void move_provider::move_gen()
   moves_ = s_.moves();
   start_ = moves_.begin();
 
-  if (!from_cache_.is_sentry())
+  if (from_cache_)
   {
     auto where(std::find(start_, moves_.end(), from_cache_));
     assert(where != moves_.end());
@@ -89,7 +88,7 @@ void move_provider::move_gen()
 
 bool move_provider::empty()
 {
-  if (!from_cache_.is_sentry())
+  if (from_cache_)
     return false;
 
   return moves_.empty();
@@ -455,8 +454,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
   auto best_move(move::sentry());
   auto type(score_type::fail_low);
 
-  move m(move::sentry());
-  while (!(m = moves.next(driver_.killers[ply])).is_sentry())
+  for (move m; (m = moves.next(driver_.killers[ply]));)
   {
     const auto d(new_draft(draft, in_check, m));
 
@@ -498,7 +496,7 @@ movelist search::extract_pv() const
 
   auto s(root_state_);
   for (auto entry(tt_->find(s.hash()));
-       entry && !entry->best_move().is_sentry()
+       entry && entry->best_move()
        && (pv.size() <= 2 * stats.depth || pv.empty())
        && s.make_move(entry->best_move());)
   {
