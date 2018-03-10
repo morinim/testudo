@@ -410,6 +410,11 @@ score search::alphabeta(const state &s, score alpha, score beta,
   driver_.path.push(s);
   auto guard = finally([&]{ driver_.path.pop(); });
 
+  // Draws. Check for draw by repetition / 50 move draws also. This is the
+  // quickest way to get out of further searching, with minimal effort.
+  if (driver_.path.repetitions() || s.fifty() >= 100)
+    return 0;
+
   // Check to see if this position has been searched before. If so, we may get
   // a real score, produce a cutoff or get nothing more than a good move to try
   // first.
@@ -442,14 +447,10 @@ score search::alphabeta(const state &s, score alpha, score beta,
     }
 
   move_provider moves(s, entry);
-
   const bool in_check(s.in_check());
 
   if (moves.empty())
     return in_check ? -INF + ply : 0;
-
-  if (driver_.path.repetitions() || s.fifty() >= 100)
-    return 0;
 
   auto best_move(move::sentry());
   auto type(score_type::fail_low);
