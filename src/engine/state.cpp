@@ -673,7 +673,7 @@ state::kind state::mate_or_draw(const std::vector<hash_t> *history) const
     unsigned rep(0);
     for (std::size_t i(0); i < history->size(); ++i)
       if ((*history)[i] == history->back())
-        ++i;
+        ++rep;
     if (rep >= 2)
       return kind::draw_repetition;
   }
