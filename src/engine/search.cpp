@@ -23,12 +23,14 @@ namespace testudo
 namespace
 {
 
+/*****************************************************************************
 // A convenient class to extract one move at time from the list of the legal
 // ones.
 // We don't sort the whole move list, but perform a selection sort each time a
 // move is fetched.
 // Root node is an exception requiring additional effort to score and sort
 // moves.
+*****************************************************************************/
 class move_provider
 {
 public:
@@ -153,6 +155,9 @@ move move_provider::next(const std::pair<move, move> &killers)
 
 }  // unnamed namespace
 
+/*****************************************************************************
+ * Driver
+ *****************************************************************************/
 search::driver::driver(const std::vector<state> &ss) : path(ss), killers(1024)
 {
 }
@@ -330,6 +335,7 @@ int search::new_draft(int draft, bool in_check, const move &m) const
 score search::alphabeta_root(score alpha, score beta, int draft)
 {
   assert(alpha < beta);
+  assert(draft >= PLY);
 
   ++stats.snodes;
 
@@ -396,6 +402,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
                         unsigned ply, int draft)
 {
   assert(alpha < beta);
+  assert(draft >= PLY);
 
   // Checks to see if we have searched enough nodes that it's time to peek at
   // how much time has been used / check for operator keyboard input.
@@ -493,14 +500,19 @@ score search::alphabeta(const state &s, score alpha, score beta,
 // draw).
 movelist search::extract_pv() const
 {
-  movelist pv;
+  std::vector<hash_t> history(driver_.path.states);
 
   auto s(root_state_);
+
+  movelist pv;
   for (auto entry(tt_->find(s.hash()));
        entry && entry->best_move()
        && (pv.size() <= 2 * stats.depth || pv.empty())
+       && s.mate_or_draw(&history) == state::kind::standard
        && s.make_move(entry->best_move());)
   {
+    history.push_back(s.hash());
+
     pv.push_back(entry->best_move());
     entry = tt_->find(s.hash());
   }
