@@ -160,22 +160,22 @@ TEST_CASE("color")
 
 TEST_CASE("square")
 {
-  CHECK(file(square(A8)) == 0);
-  CHECK(file(square( 9)) == 1);
-  CHECK(file(square(18)) == 2);
-  CHECK(file(square(27)) == 3);
-  CHECK(file(square(36)) == 4);
-  CHECK(file(square(45)) == 5);
-  CHECK(file(square(54)) == 6);
-  CHECK(file(square(H1)) == 7);
+  CHECK(file(square(A8)) == FILE_A);
+  CHECK(file(square(B7)) == FILE_B);
+  CHECK(file(square(C6)) == FILE_C);
+  CHECK(file(square(D5)) == FILE_D);
+  CHECK(file(square(E4)) == FILE_E);
+  CHECK(file(square(F3)) == FILE_F);
+  CHECK(file(square(G2)) == FILE_G);
+  CHECK(file(square(H1)) == FILE_H);
 
   CHECK(rank(square(A8)) == 7);
-  CHECK(rank(square( 9)) == 6);
-  CHECK(rank(square(18)) == 5);
-  CHECK(rank(square(27)) == 4);
-  CHECK(rank(square(36)) == 3);
-  CHECK(rank(square(45)) == 2);
-  CHECK(rank(square(54)) == 1);
+  CHECK(rank(square(B7)) == 6);
+  CHECK(rank(square(C6)) == 5);
+  CHECK(rank(square(D5)) == 4);
+  CHECK(rank(square(E4)) == 3);
+  CHECK(rank(square(F3)) == 2);
+  CHECK(rank(square(G2)) == 1);
   CHECK(rank(square(H1)) == 0);
 
   for (square i(0); i < 64; ++i)
@@ -207,11 +207,19 @@ TEST_CASE("square")
   CHECK(first_rank(WHITE) == rank(A1));
   CHECK(second_rank(BLACK) == rank(A7));
   CHECK(second_rank(WHITE) == rank(A2));
-  CHECK(seventh_rank(BLACK) == rank(A2));
-  CHECK(seventh_rank(WHITE) == rank(A7));
-  CHECK(eighth_rank(BLACK) == rank(A1));
-  CHECK(eighth_rank(WHITE) == rank(A8));
+  CHECK(seventh_rank(BLACK) == second_rank(WHITE));
+  CHECK(seventh_rank(WHITE) == second_rank(BLACK));
+  CHECK(eighth_rank(BLACK) == first_rank(WHITE));
+  CHECK(eighth_rank(WHITE) == first_rank(BLACK));
 
+  CHECK(flip(G1) == G8);
+  CHECK(flip(G8) == G1);
+  CHECK(flip(B1) == B8);
+  CHECK(flip(B8) == B1);
+
+  CHECK(step_fwd(BLACK) == -step_fwd(WHITE));
+  CHECK(E2 + 2 * step_fwd(WHITE) == E4);
+  CHECK(E7 + 2 * step_fwd(BLACK) == E5);
 }
 
 TEST_CASE("piece")
@@ -491,7 +499,7 @@ TEST_CASE("hash_store_n_probe")
 
 TEST_SUITE("EVAL")
 {
-// Verify that evaluation results are symmetrical between White and Black side
+// Verify phase range.
 TEST_CASE("eval_phase")
 {
   for (const auto &test : test_set())
@@ -505,7 +513,7 @@ TEST_CASE("eval_phase")
                  });
 }
 
-// Verify that evaluation results are symmetrical between White and Black side
+// Verify that evaluation results are symmetrical between White and Black side.
 TEST_CASE("eval_flip")
 {
   for (const auto &test : test_set())
@@ -525,6 +533,37 @@ TEST_CASE("eval_flip")
                    const auto v2(eval(pos2));
                    CHECK(v == v2);
                  });
+}
+
+TEST_CASE("king_shield")
+{
+  // Cannot castle anymore: just consider the current pawn shield (full
+  // shield).
+  const state s1("4k3/3ppp2/8/8/8/8/5PPP/6K1 w - -");
+  const score_vector sv1(s1);
+  CHECK(sv1.king_shield[WHITE] == 3 * db.pawn_shield1());
+  CHECK(sv1.king_shield[BLACK] == 3 * db.pawn_shield1());
+
+  // Cannot castle anymore: just consider the current pawn shield (almost full
+  // shield).
+  const state s2("4k3/3p1p2/4p3/8/8/6P1/5P1P/6K1 w - -");
+  const score_vector sv2(s2);
+  CHECK(sv2.king_shield[WHITE] == 2 * db.pawn_shield1() + db.pawn_shield2());
+  CHECK(sv2.king_shield[BLACK] == 2 * db.pawn_shield1() + db.pawn_shield2());
+
+  // Player can castle:
+  // - if castling is favourable take the average of the current position and
+  //   the after castling position;
+  // - if castling isn't favourable just consider the current situation.
+  const state s3("4k3/3ppp2/8/8/8/8/PPP5/4K3 w kQ -");
+  const score_vector sv3(s3);
+  CHECK(sv3.king_shield[WHITE] == 3 * db.pawn_shield1() / 2);
+  CHECK(sv3.king_shield[BLACK] == 3 * db.pawn_shield1());
+
+  const state s4("4k3/5p2/4p3/3p4/8/8/PPP5/4K3 w Q -");
+  const score_vector sv4(s4);
+  CHECK(sv4.king_shield[WHITE] == 3 * db.pawn_shield1() / 2);
+  CHECK(sv4.king_shield[BLACK] == db.pawn_shield1() + db.pawn_shield2());
 }
 
 }  // TEST_SUITE "EVAL"

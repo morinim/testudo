@@ -14,11 +14,83 @@
 namespace testudo
 {
 
+void eval_king_shield(const state &s, score_vector &e)
+{
+  const auto shelter_file(
+    [&s](color c, square sq)
+    {
+      assert(valid(sq));
+
+      const piece pawn(piece(c, piece::pawn));
+
+      assert(valid(sq + step_fwd(c)));
+      if (s[sq + step_fwd(c)] == pawn)
+        return db.pawn_shield1();
+
+      assert(valid(sq + 2 * step_fwd(c)));
+      if (s[sq + 2 * step_fwd(c)] == pawn)
+        return db.pawn_shield2();
+
+      return 0;
+    });
+
+  const auto shelter_square(
+    [&shelter_file](color c, square sq)
+    {
+      assert(valid(sq));
+
+      const auto r(rank(sq));
+      if (r == first_rank(c) || r == second_rank(c))
+      {
+        score ret(shelter_file(c, sq));
+        if (file(sq) > FILE_A)
+          ret += shelter_file(c, sq - 1);
+        if (file(sq) < FILE_H)
+          ret += shelter_file(c, sq + 1);
+
+        return ret;
+      }
+
+      return 0;
+    });
+
+  for (unsigned c(0); c < 2; ++c)
+  {
+    const score bonus_here(shelter_square(c, s.king_square(c)));
+    score bonus_castle(bonus_here);
+
+    // If castling is:
+    // - favourable, take the average of the current position and the after
+    //   castling position;
+    // - not favourable, just consider the current situation.
+
+    if (s.kingside_castle(c))
+    {
+      const score tmp(shelter_square(c, c == WHITE ? G1 : G8));
+      if (tmp > bonus_castle)
+        bonus_castle = tmp;
+    }
+    if (s.queenside_castle(c))
+    {
+      const score tmp(shelter_square(c, c == WHITE ? B1 : B8));
+      if (tmp > bonus_castle)
+        bonus_castle = tmp;
+    }
+
+    e.king_shield[c] = (bonus_here + bonus_castle) / 2;
+  }
+}
+
 void eval_m(const state &s, score_vector &e)
 {
   for (square i(0); i < 64; ++i)
     if (s[i] != EMPTY)
       e.pcsq_m[s[i].color()] += db.pcsq_m(s[i], i);
+
+  eval_king_shield(s, e);
+
+  e.mg = e.pcsq_m[s.side()] - e.pcsq_m[!s.side()]
+         + e.king_shield[s.side()] - e.king_shield[!s.side()];
 }
 
 void eval_e(const state &s, score_vector &e)
@@ -26,6 +98,8 @@ void eval_e(const state &s, score_vector &e)
   for (square i(0); i < 64; ++i)
     if (s[i] != EMPTY)
       e.pcsq_e[s[i].color()] += db.pcsq_e(s[i], i);
+
+  e.eg = e.pcsq_e[s.side()] - e.pcsq_e[!s.side()];
 }
 
 // Phase index: 0 is opening, 256 endgame.
@@ -61,7 +135,8 @@ int phase256(const state &s)
 }
 
 score_vector::score_vector(const state &s)
-  : phase(), material{0, 0}, adjust_material{0, 0}, pcsq_e{0, 0}, pcsq_m{0, 0}
+  : phase(), material{0, 0}, adjust_material{0, 0}, king_shield{0, 0},
+    pcsq_e{0, 0}, pcsq_m{0, 0}, eg(), mg()
 {
   eval_e(s, *this);
   eval_m(s, *this);
@@ -102,13 +177,10 @@ score eval(const state &s)
 {
   score_vector e(s);
 
-  const auto ee(e.pcsq_e[s.side()] - e.pcsq_e[!s.side()]);
-  const auto em(e.pcsq_m[s.side()] - e.pcsq_m[!s.side()]);
-
   return
     e.material[s.side()] - e.material[!s.side()]
     + e.adjust_material[s.side()] - e.adjust_material[!s.side()]
-    + (em * (256 - e.phase) + ee * e.phase) / 256;
+    + (e.mg * (256 - e.phase) + e.eg * e.phase) / 256;
 }
 
 }  // namespace testudo

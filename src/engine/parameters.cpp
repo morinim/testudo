@@ -60,6 +60,9 @@ bool parameters::save() const
 
   pp_adj_.save(j);
 
+  j["king_shield"]["pawn_shield1"] = pawn_shield1_;
+  j["king_shield"]["pawn_shield2"] = pawn_shield2_;
+
   std::ofstream f("testudo.json");
   return !!f && f << j;
 }
@@ -95,6 +98,12 @@ bool parameters::load()
                       "(missing 'pp_adj' section)";
     return false;
   }
+
+  pawn_shield1_ = j["king_shield"]["pawn_shield1"];
+  pawn_shield2_ = j["king_shield"]["pawn_shield2"];
+
+  clamp(pawn_shield1_, 0, 20);
+  clamp(pawn_shield2_, 0, 20);
 
   return true;
 }

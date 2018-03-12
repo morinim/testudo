@@ -23,8 +23,8 @@ class parameters
 public:
   parameters();
 
-  score pcsq_e(piece p, square s) const { return pcsq_.eg[p.id()][s]; }
-  score pcsq_m(piece p, square s) const { return pcsq_.mg[p.id()][s]; }
+  score pcsq_e(piece p, square s) const noexcept { return pcsq_.eg[p.id()][s]; }
+  score pcsq_m(piece p, square s) const noexcept { return pcsq_.mg[p.id()][s]; }
 
   score bishop_pair() const noexcept { return bishop_pair_; }
   score knight_pair() const noexcept { return knight_pair_; }
@@ -34,6 +34,9 @@ public:
   { assert(pawns < 9);  return pp_adj_.n[pawns]; }
   score r_adj(unsigned pawns) const
   { assert(pawns < 9);  return pp_adj_.r[pawns]; }
+
+  score pawn_shield1() const noexcept { return pawn_shield1_; }
+  score pawn_shield2() const noexcept { return pawn_shield2_; }
 
   bool save() const;
 
@@ -120,6 +123,10 @@ private:
   private:
     static const std::string sec_name;
   } pp_adj_;
+
+  // Bonus for pawns making a king's shelter.
+  score pawn_shield1_ = 10;  // [0; 20]
+  score pawn_shield2_ =  5;
 };  // class parameters
 
 extern parameters db;

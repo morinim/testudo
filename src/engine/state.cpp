@@ -71,9 +71,6 @@ const std::size_t mailbox64[/* here goes a `square` */] =
   91, 92, 93, 94, 95, 96, 97, 98
 };
 
-// Forward moving offset for a Pawn of a specific color.
-const int pawn_fwd[2] = {8, -8};
-
 // Used to determine the castling permissions after a move. What we do is
 // logical-AND the castle bits with the castle_mask bits for both of the
 // move's squares. Let's say `castle_` is `white_kingside` (`1`). Now we play
@@ -333,14 +330,14 @@ void state::process_piece_moves(F f, square i) const
   {
     process_pawn_captures(f, i);
 
-    auto to(i + pawn_fwd[side()]);
+    auto to(i + step_fwd(side()));
     if (board_[to] == EMPTY)
     {
       process_pawn_m(f, i, to, move::pawn);
 
       if (rank(i) == second_rank(side()))
       {
-        to += pawn_fwd[side()];
+        to += step_fwd(side());
         if (board_[to] == EMPTY)
           process_pawn_m(f, i, to, move::pawn|move::two_squares);
       }
@@ -517,12 +514,6 @@ bool state::attack(square target, color attacker) const
   return false;
 }
 
-bool state::in_check(color c) const
-{
-  assert(board_[piece_cnt_[c][piece::king]] == piece(c, piece::king));
-  return attack(piece_cnt_[c][piece::king], !c);
-}
-
 // Erases a piece on a given square and takes care for all the incrementally
 // updated stuff: hash keys, piece counters...
 void state::clear_square(square i)
@@ -621,7 +612,7 @@ bool state::make_move(const move &m)
   }
   if (m.flags & move::two_squares)
   {
-    ep_ = m.to - pawn_fwd[side()];
+    ep_ = m.to - step_fwd(side());
     hash_ ^= zobrist::ep[file(en_passant())];
   }
 
@@ -645,7 +636,7 @@ bool state::make_move(const move &m)
   // Erase the Pawn if this is an en passant move.
   if (m.flags & move::en_passant)
   {
-    const auto epc(m.to - pawn_fwd[side()]);
+    const auto epc(m.to - step_fwd(side()));
     clear_square(epc);
   }
 

@@ -30,25 +30,36 @@ constexpr square A8= 0, B8= 1, C8= 2, D8= 3, E8= 4, F8= 5, G8= 6, H8= 7,
                  A2=48, B2=49, C2=50, D2=51, E2=52, F2=53, G2=54, H2=55,
                  A1=56, B1=57, C1=58, D1=59, E1=60, F1=61, G1=62, H1=63;
 
-inline constexpr unsigned file(square s) { return s & 7; }
+constexpr unsigned FILE_A = 0, FILE_B = 1, FILE_C = 2, FILE_D = 3,
+                   FILE_E = 4, FILE_F = 5, FILE_G = 6, FILE_H = 7;
+
+inline constexpr unsigned file(square s) noexcept { return s & 7; }
 
 // The row of the square numbered 0-7 from White's side of the board.
-inline constexpr unsigned rank(square s) { return 7 - (s >> 3); }
+inline constexpr unsigned rank(square s) noexcept { return 7 - (s >> 3); }
 
-inline constexpr bool valid(square s) { return s >= 0; }
+inline constexpr bool valid(square s) noexcept { return s >= 0; }
 
 // Players customarily refer to ranks from their own perspectives. For example:
 // White's king and other pieces start on his or her first (or "back") rank,
 // whereas Black calls the same rank the eighth rank; White's seventh rank is
 // Black's second and so on.
-inline constexpr unsigned first_rank(color c) { return c == BLACK ? 7 : 0; }
-inline constexpr unsigned second_rank(color c) { return c == BLACK ? 6 : 1; }
-inline constexpr unsigned seventh_rank(color c) { return c == BLACK ? 1 : 6; }
-inline constexpr unsigned eighth_rank(color c) { return c == BLACK ? 0 : 7; }
+inline constexpr unsigned first_rank(color c) noexcept
+{ return c == BLACK ? 7 : 0; }
+inline constexpr unsigned second_rank(color c) noexcept
+{ return c == BLACK ? 6 : 1; }
+inline constexpr unsigned seventh_rank(color c) noexcept
+{ return c == BLACK ? 1 : 6; }
+inline constexpr unsigned eighth_rank(color c) noexcept
+{ return c == BLACK ? 0 : 7; }
 
 // An exclusive-or with `56` performs a vertical flip of the coordinates.
-inline constexpr square flip(square sq)
+inline constexpr square flip(square sq) noexcept
 { return sq ^ 56; }
+
+// Forward moving offset for a Pawn of a specific color.
+inline constexpr int step_fwd(color c) noexcept
+{ return c == BLACK ? 8 : -8; }
 
 }  // namespace testudo
 

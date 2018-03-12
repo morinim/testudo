@@ -64,6 +64,11 @@ public:
   square en_passant() const noexcept { return ep_; }
   // Castle rights.
   auto castle() const noexcept { return castle_; }
+  bool kingside_castle(color c) const noexcept
+  { return castle_ & (c == BLACK ? black_kingside : white_kingside); }
+  bool queenside_castle(color c) const noexcept
+  { return castle_ & (c == BLACK ? black_queenside : white_queenside); }
+
   // Gets side to move.
   color side() const noexcept { return stm_; }
   // Changes side to move.
@@ -76,6 +81,7 @@ public:
   hash_t hash() const noexcept { return hash_; }
 
   unsigned piece_count(color, enum piece::type) const;
+  square king_square(color) const;
 
 private:
   void add_m(movelist &, square, square, move::flags_t) const;
@@ -114,10 +120,19 @@ inline state state::after_move(const move &m) const
 
 inline unsigned state::piece_count(color c, enum piece::type t) const
 {
-  assert(c == WHITE || c == BLACK);
   assert(t != piece::king);
-
   return piece_cnt_[c][t];
+}
+
+inline square state::king_square(color c) const
+{
+  assert(board_[piece_cnt_[c][piece::king]] == piece(c, piece::king));
+  return piece_cnt_[c][piece::king];
+}
+
+inline bool state::in_check(color c) const
+{
+  return attack(king_square(c), !c);
 }
 
 inline bool operator==(const state &lhs, const state &rhs)

@@ -25,8 +25,13 @@ struct score_vector
   score material[2];
   score adjust_material[2];
 
+  score king_shield[2];
+
   score pcsq_e[2];
   score pcsq_m[2];
+
+  score eg;
+  score mg;
 };
 
 extern score eval(const state &);
