@@ -158,14 +158,15 @@ move move_provider::next(const std::pair<move, move> &killers)
 /*****************************************************************************
  * Driver
  *****************************************************************************/
-search::driver::driver(const std::vector<state> &ss) : path(ss), killers(1024)
+search::driver::driver(const std::vector<state> &ss)
+  : path(ss), killers(MAX_DEPTH)
 {
 }
 
 void search::driver::set_killer(unsigned ply, const move &m)
 {
   assert(ply < killers.size());
-  assert(m.is_quiet());
+  assert(is_quiet(m));
 
   // Makes sure killer moves will be different before saving secondary killer
   // move.
@@ -199,6 +200,10 @@ search::driver::path_info::path_info(const std::vector<state> &ss)
 bool search::driver::path_info::repetitions() const
 {
   assert(!states.empty());
+
+  //return
+  //  std::find(states.begin(), std::prev(states.end()), states.back())
+  //  != states.end();
 
   const std::size_t current(states.size() - 1);
 
@@ -320,6 +325,9 @@ int search::new_draft(int draft, bool in_check, const move &m) const
 
   if (is_capture(m))
     delta += PLY/2;
+
+  //if ((m.flags & move::pawn) && (rank(m.to) <= 1 || rank(m.to) >= 6))
+  //  delta += PLY/2;
 
   return draft + std::min(0, delta);
 }
@@ -478,7 +486,8 @@ score search::alphabeta(const state &s, score alpha, score beta,
       {
         type = score_type::fail_high;
 
-        driver_.set_killer(ply, best_move);
+        if (is_quiet(m))
+          driver_.set_killer(ply, m);
         break;
       }
 

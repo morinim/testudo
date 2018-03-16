@@ -62,6 +62,8 @@ private:
 
   struct driver
   {
+    static constexpr unsigned MAX_DEPTH = 1024;
+
     explicit driver(const std::vector<state> &);
 
     // Contains information about the path leading to the node being analyzed.
@@ -99,7 +101,7 @@ inline search::search(const std::vector<state> &states, cache *tt)
   assert(!states.empty());
   assert(tt);
 
-  assert(!path_info_.states.empty());
+  assert(!driver_.path.states.empty());
 }
 
 }  // namespace testudo
