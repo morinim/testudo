@@ -27,6 +27,9 @@ struct score_vector
 
   score king_shield[2];
 
+  score pawns_e[2];
+  score pawns_m[2];
+
   score pcsq_e[2];
   score pcsq_m[2];
 

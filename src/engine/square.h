@@ -11,6 +11,7 @@
 #if !defined(TESTUDO_SQUARE_H)
 #define      TESTUDO_SQUARE_H
 
+#include <cassert>
 #include <cstdint>
 
 #include "color.h"
@@ -54,12 +55,21 @@ inline constexpr unsigned eighth_rank(color c) noexcept
 { return c == BLACK ? 0 : 7; }
 
 // An exclusive-or with `56` performs a vertical flip of the coordinates.
-inline constexpr square flip(square sq) noexcept
-{ return sq ^ 56; }
+inline constexpr square flip(square sq)
+{
+  assert(0 <= sq && sq < 64);
+  return sq ^ 56;
+}
 
 // Forward moving offset for a Pawn of a specific color.
 inline constexpr int step_fwd(color c) noexcept
 { return c == BLACK ? 8 : -8; }
+
+inline constexpr unsigned rank(color c, square sq)
+{
+  assert(0 <= sq && sq < 64);
+  return c == BLACK ? (sq >> 3) : (flip(sq) >> 3);
+}
 
 }  // namespace testudo
 

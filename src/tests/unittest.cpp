@@ -220,6 +220,30 @@ TEST_CASE("square")
   CHECK(step_fwd(BLACK) == -step_fwd(WHITE));
   CHECK(E2 + 2 * step_fwd(WHITE) == E4);
   CHECK(E7 + 2 * step_fwd(BLACK) == E5);
+
+  for (square i(0); i < 64; ++i)
+    CHECK(rank(i) == rank(WHITE, i));
+
+  for (square i(A8); i <= H8; ++i)
+  {
+    CHECK(rank(BLACK, i) == 0);
+    CHECK(rank(WHITE, i) == 7);
+  }
+  for (square i(A7); i <= H7; ++i)
+  {
+    CHECK(rank(BLACK, i) == 1);
+    CHECK(rank(WHITE, i) == 6);
+  }
+  for (square i(A2); i <= H2; ++i)
+  {
+    CHECK(rank(WHITE, i) == 1);
+    CHECK(rank(BLACK, i) == 6);
+  }
+  for (square i(A1); i <= H1; ++i)
+  {
+    CHECK(rank(WHITE, i) == 0);
+    CHECK(rank(BLACK, i) == 7);
+  }
 }
 
 TEST_CASE("piece")
@@ -566,6 +590,86 @@ TEST_CASE("king_shield")
   CHECK(sv4.king_shield[BLACK] == db.pawn_shield1() + db.pawn_shield2());
 }
 
+TEST_CASE("pawn_structure")
+{
+  const state s1("8/8/8/8/8/8/P7/K6k w - -");
+  const score_vector sv1(s1);
+  CHECK(sv1.pawns_e[WHITE] == db.pawn_passed_e(1) + db.pawn_weak_e(FILE_A));
+  CHECK(sv1.pawns_m[WHITE]
+        == db.pawn_passed_m(1) + db.pawn_weak_open_m(FILE_A));
+
+  std::cout << "let's go\n";
+  const state s2("8/P7/8/8/8/8/8/K6k w - -");
+  const score_vector sv2(s2);
+  CHECK(sv2.pawns_e[WHITE] == db.pawn_passed_e(6) + db.pawn_weak_e(FILE_A));
+  CHECK(sv2.pawns_m[WHITE]
+        == db.pawn_passed_m(6) + db.pawn_weak_open_m(FILE_A));
+
+  const state s3("8/8/8/8/8/Pp6/1P6/K6k w - -");
+  const score_vector sv3(s3);
+  CHECK(sv3.pawns_e[WHITE]
+        == db.pawn_protected_passed_e(2) + db.pawn_weak_e(FILE_B));
+  CHECK(sv3.pawns_m[WHITE]
+        == db.pawn_passed_m(2) + db.pawn_weak_m(FILE_B));
+
+  const state s4("8/Pp6/1P/8/8/8/8/K6k w - -");
+  const score_vector sv4(s4);
+  CHECK(sv4.pawns_e[WHITE]
+        == db.pawn_protected_passed_e(6) + db.pawn_weak_e(FILE_B));
+  CHECK(sv4.pawns_m[WHITE]
+        == db.pawn_passed_m(6) + db.pawn_weak_m(FILE_B));
+
+  const state s5("8/8/Pp6/8/8/8/1P/K6k w - -");
+  const score_vector sv5(s5);
+  CHECK(sv5.pawns_e[WHITE]
+        == db.pawn_passed_e(5) + db.pawn_weak_e(FILE_B));
+  CHECK(sv5.pawns_m[WHITE]
+        == db.pawn_passed_m(5) + db.pawn_weak_m(FILE_B));
+
+  const state s6("8/8/8/PP/8/8/8/K6k w - -");
+  const score_vector sv6(s6);
+  CHECK(sv6.pawns_e[WHITE] == 2 * db.pawn_protected_passed_e(4));
+  CHECK(sv6.pawns_m[WHITE] == 2 * db.pawn_passed_m(4));
+
+  const state s7("8/8/3p4/3P4/3P4/8/8/K6k w - -");
+  const score_vector sv7(s7);
+  CHECK(sv7.pawns_e[WHITE]
+        == 2 * db.pawn_weak_e(FILE_D) + db.pawn_doubled_e());
+  CHECK(sv7.pawns_m[WHITE]
+        == 2 * db.pawn_weak_m(FILE_D) + db.pawn_doubled_m());
+
+  const state s8("8/8/8/3P4/3P4/8/8/K6k w - -");
+  const score_vector sv8(s8);
+  CHECK(sv8.pawns_e[WHITE]
+        == 2 * db.pawn_weak_e(FILE_D) + db.pawn_passed_e(4)
+           + db.pawn_doubled_e());
+  CHECK(sv8.pawns_m[WHITE]
+        == 2 * db.pawn_weak_open_m(FILE_D) + db.pawn_passed_m(4)
+           + db.pawn_doubled_m());
+
+  const state s8b("7r/8/8/3P4/3P4/8/8/K6k w - -");
+  const score_vector sv8b(s8b);
+  CHECK(sv8b.pawns_e[WHITE]
+        == 2 * db.pawn_weak_open_e(FILE_D) + db.pawn_passed_e(4)
+           + db.pawn_doubled_e());
+  CHECK(sv8b.pawns_m[WHITE]
+        == 2 * db.pawn_weak_open_m(FILE_D) + db.pawn_passed_m(4)
+           + db.pawn_doubled_m());
+
+  const state s9("8/1p6/8/3P4/3P4/2P5/8/K6k w - -");
+  const score_vector sv9(s9);
+  CHECK(sv9.pawns_e[WHITE]
+        == db.pawn_passed_e(4) + db.pawn_doubled_e() + db.pawn_weak_e(FILE_C));
+  CHECK(sv9.pawns_m[WHITE]
+        == db.pawn_passed_m(4) + db.pawn_doubled_m()
+           + db.pawn_weak_open_m(FILE_C));
+
+  const state s10("8/8/8/8/8/1PP5/8/K6k w - -");
+  const score_vector sv10(s10);
+  CHECK(sv10.pawns_e[WHITE] == 2 * db.pawn_protected_passed_e(2));
+  CHECK(sv10.pawns_m[WHITE] == 2 * db.pawn_passed_m(2));
+}
+
 }  // TEST_SUITE "EVAL"
 
 TEST_SUITE("SEARCH")
@@ -590,6 +694,20 @@ TEST_CASE("draw_position")
   cache tt;
   search s({p}, &tt);
   s.max_depth = 9;
+
+  s.run(true);
+  CHECK(s.stats.score_at_root == 0);
+}
+
+TEST_CASE("draw_position2")
+{
+  // From a game with TSCP.
+  const state p("q7/6k1/1p4p1/3p4/2pP1Q1P/p1P1PK2/2P4P/8 w - - 8 61");
+  //const state p("q5k1/8/1p6/3p3Q/2pP4/p1P1PK2/2P4P/8 b - - 0 5");
+
+  cache tt;
+  search s({p}, &tt);
+  s.max_depth = 10;
 
   s.run(true);
   CHECK(s.stats.score_at_root == 0);

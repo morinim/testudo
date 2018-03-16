@@ -21,9 +21,9 @@ namespace
 {
 
 template<class T>
-void clamp(T &v, const T &lo, const T &hi)
+void clamp(T &v, T lo, T hi)
 {
-  assert(lo < hi);
+  assert(lo <= hi);
   if (v < lo)
     v = lo;
   else if (v > hi)
@@ -32,6 +32,7 @@ void clamp(T &v, const T &lo, const T &hi)
 
 }  // unnamed namespace
 
+const std::string parameters::pawn::sec_name   =   "pawn";
 const std::string parameters::pcsq::sec_name   =   "pcsq";
 const std::string parameters::pp_adj::sec_name = "pp_adj";
 
@@ -44,27 +45,9 @@ parameters::parameters()
     testudoINFO << "Using default values for some/all parameters";
   }
 
+  pawn_.init();
   pcsq_.init();
   pp_adj_.init();
-}
-
-bool parameters::save() const
-{
-  nlohmann::json j;
-
-  pcsq_.save(j);
-
-  j["material"]["bishop_pair"] = bishop_pair_;
-  j["material"]["knight_pair"] = knight_pair_;
-  j["material"]["rook_pair"]   =   rook_pair_;
-
-  pp_adj_.save(j);
-
-  j["king_shield"]["pawn_shield1"] = pawn_shield1_;
-  j["king_shield"]["pawn_shield2"] = pawn_shield2_;
-
-  std::ofstream f("testudo.json");
-  return !!f && f << j;
 }
 
 bool parameters::load()
@@ -77,11 +60,13 @@ bool parameters::load()
   if (!(f >> j))
     return false;
 
+  bool ret(true);
+
   if (!pcsq_.load(j))
   {
     testudoWARNING << "Partial initialization of the parameters "
                       "(missing 'pcsq' section)";
-    return false;
+    ret = false;
   }
 
   bishop_pair_ = j["material"]["bishop_pair"];
@@ -96,16 +81,163 @@ bool parameters::load()
   {
     testudoWARNING << "Partial initialization of the parameters "
                       "(missing 'pp_adj' section)";
-    return false;
+    ret = false;
   }
 
-  pawn_shield1_ = j["king_shield"]["pawn_shield1"];
-  pawn_shield2_ = j["king_shield"]["pawn_shield2"];
+  if (!pawn_.load(j))
+  {
+    testudoWARNING << "Partial initialization of the parameters "
+                      "(missing 'pawn' section)";
+    ret =  false;
+  }
 
-  clamp(pawn_shield1_, 0, 20);
-  clamp(pawn_shield2_, 0, 20);
+  return ret;
+}
+
+bool parameters::save() const
+{
+  nlohmann::json j;
+
+  pcsq_.save(j);
+
+  j["material"]["bishop_pair"] = bishop_pair_;
+  j["material"]["knight_pair"] = knight_pair_;
+  j["material"]["rook_pair"]   =   rook_pair_;
+
+  pp_adj_.save(j);
+
+  pawn_.save(j);
+
+  std::ofstream f("testudo.json");
+  return !!f && f << j;
+}
+
+void parameters::pawn::init()
+{
+  const auto scale([](int y_min, int y_max, int x_min, int x_max, int x)
+                   {
+                     assert(y_min <= y_max);
+                     assert(x_min < x_max);
+                     assert(x_min <= x && x <= x_max);
+
+                     const auto dy(y_max - y_min), dx(x_max - x_min);
+                     return (dy * (x - x_min) + y_min * dx) / dx;
+                   });
+
+  passed_e[0] = passed_m[0] = 0;  // not used - just for security
+
+  for (int r(1); r < 7; ++r)
+  {
+    passed_e[r] = scale(passed_min_e, passed_max_e, 1, 6, r);
+    passed_m[r] = scale(passed_min_m, passed_max_m, 1, 6, r);
+
+    protected_passed_e[r] = passed_e[r] * protected_passed_perc / 100;
+  }
+  assert(passed_e[6] == passed_max_e);
+  assert(passed_e[1] == passed_min_e);
+  assert(passed_m[6] == passed_max_m);
+  assert(passed_m[1] == passed_min_m);
+  assert(protected_passed_e[6] == passed_max_e * protected_passed_perc / 100);
+  assert(protected_passed_e[1] == passed_min_e * protected_passed_perc / 100);
+
+  for (unsigned f(0); f < 8; ++f)
+  {
+    const auto dist(f >= FILE_E ? FILE_H - f : f - FILE_A);
+
+    weak_e[f] = scale(weak_min_e, weak_max_e, 0, 3, dist);
+    weak_m[f] = scale(weak_min_m, weak_max_m, 0, 3, dist);
+
+    weak_open_e[f] = weak_e[f] * weak_open_perc / 100;
+    weak_open_m[f] = weak_m[f] * weak_open_perc / 100;
+  }
+
+  assert(weak_e[FILE_A] == weak_e[FILE_H]);
+  assert(weak_m[FILE_A] == weak_m[FILE_H]);
+  assert(weak_open_e[FILE_A] == weak_open_e[FILE_H]);
+  assert(weak_open_m[FILE_A] == weak_open_m[FILE_H]);
+
+  assert(weak_e[FILE_A] == weak_min_e);
+  assert(weak_m[FILE_A] == weak_min_m);
+  assert(weak_e[FILE_D] == weak_max_e);
+  assert(weak_m[FILE_D] == weak_max_m);
+  assert(weak_open_e[FILE_A] = weak_min_e * weak_open_perc / 100);
+  assert(weak_open_m[FILE_A] = weak_min_m * weak_open_perc / 100);
+  assert(weak_open_e[FILE_D] = weak_max_e * weak_open_perc / 100);
+  assert(weak_open_m[FILE_D] = weak_max_m * weak_open_perc / 100);
+}
+
+bool parameters::pawn::load(const nlohmann::json &j)
+{
+  doubled_e =  j[sec_name]["doubled_e"];
+  doubled_m =  j[sec_name]["doubled_m"];
+
+  passed_min_e = j[sec_name]["passed_min_e"];
+  passed_max_e = j[sec_name]["passed_max_e"];
+
+  passed_min_m = j[sec_name]["passed_min_m"];
+  passed_max_m = j[sec_name]["passed_max_m"];
+
+  protected_passed_perc = j[sec_name]["protected_passed_perc"];
+
+  shield1 = j[sec_name]["king_shield1"];
+  shield2 = j[sec_name]["king_shield2"];
+
+  weak_min_e = j[sec_name]["weak_min_e"];
+  weak_max_e = j[sec_name]["weak_max_e"];
+
+  weak_min_m = j[sec_name]["weak_min_m"];
+  weak_max_m = j[sec_name]["weak_max_m"];
+
+  weak_open_perc = j[sec_name]["weak_open_perc"];
+
+  clamp(doubled_e,       -30, 0);
+  clamp(doubled_m, doubled_e, 0);
+
+  clamp(passed_min_m,            0, passed_min_e);
+  clamp(passed_max_m, passed_min_m, passed_max_e);
+
+  clamp(passed_min_e, passed_min_m, 100);
+  clamp(passed_max_e, passed_min_e, 140);
+
+  clamp(protected_passed_perc, 100, 200);
+
+  clamp(shield1, 0,      20);
+  clamp(shield2, 0, shield1);
+
+  clamp(weak_min_e,          0, 20);
+  clamp(weak_max_e, weak_min_e, 40);
+
+  clamp(weak_min_m,          0, 20);
+  clamp(weak_max_m, weak_min_m, 40);
+
+  clamp(weak_open_perc, 100, 200);
 
   return true;
+}
+
+void parameters::pawn::save(nlohmann::json &j) const
+{
+  j[sec_name]["doubled_e"] = doubled_e;
+  j[sec_name]["doubled_m"] = doubled_m;
+
+  j[sec_name]["passed_min_e"] = passed_min_e;
+  j[sec_name]["passed_max_e"] = passed_max_e;
+
+  j[sec_name]["passed_min_m"] = passed_min_m;
+  j[sec_name]["passed_max_m"] = passed_max_m;
+
+  j[sec_name]["protected_passed_perc"] = protected_passed_perc;
+
+  j[sec_name]["king_shield1"] = shield1;
+  j[sec_name]["king_shield2"] = shield2;
+
+  j[sec_name]["weak_min_e"] = weak_min_e;
+  j[sec_name]["weak_max_e"] = weak_max_e;
+
+  j[sec_name]["weak_min_m"] = weak_min_m;
+  j[sec_name]["weak_max_m"] = weak_max_m;
+
+  j[sec_name]["weak_open_perc"] = weak_open_perc;
 }
 
 // The general idea comes from Fruit.

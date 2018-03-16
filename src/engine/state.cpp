@@ -8,6 +8,7 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include <algorithm>
 #include <cassert>
 #include <sstream>
 
@@ -661,11 +662,8 @@ state::kind state::mate_or_draw(const std::vector<hash_t> *history) const
     assert(!history->empty());
     assert(history->back() == hash());
 
-    unsigned rep(0);
-    for (std::size_t i(0); i < history->size(); ++i)
-      if ((*history)[i] == history->back())
-        ++rep;
-    if (rep >= 2)
+    if (std::count(history->begin(), std::prev(history->end()),
+                   history->back()) >= 2)
       return kind::draw_repetition;
   }
 

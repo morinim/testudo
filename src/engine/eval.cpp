@@ -81,25 +81,187 @@ void eval_king_shield(const state &s, score_vector &e)
   }
 }
 
-void eval_m(const state &s, score_vector &e)
+void eval_pawn_e(const state &s, square i, score_vector &e)
 {
-  for (square i(0); i < 64; ++i)
-    if (s[i] != EMPTY)
-      e.pcsq_m[s[i].color()] += db.pcsq_m(s[i], i);
+  assert(s[i].type() == piece::pawn);
+  const color c(s[i].color());
+  const piece pawn(s[i]), xpawn(!c, piece::pawn);
 
-  eval_king_shield(s, e);
+  e.pcsq_e[c] += db.pcsq_e(pawn, i);
 
-  e.mg = e.pcsq_m[s.side()] - e.pcsq_m[!s.side()]
-         + e.king_shield[s.side()] - e.king_shield[!s.side()];
+  bool is_passed(  true);  // we will be trying to disprove that
+  bool is_opposed(false);
+
+  // The loop below detects doubled pawns, passed pawns and sets a flag on
+  // finding that our pawn is opposed by enemy pawn.
+  for (square sq(i + step_fwd(c)); rank(c, sq) < 7; sq += step_fwd(c))
+  {
+    if (s[sq].type() == piece::pawn)
+    {
+      is_passed = false;
+
+      if (s[sq] == pawn)
+        e.pawns_e[c] += db.pawn_doubled_e();
+      else
+      {
+        assert(s[sq] == xpawn);
+        is_opposed = true;
+        break;
+      }
+    }
+
+    if (file(sq) > FILE_A && s[sq - 1] == xpawn)
+      is_passed = false;
+    else if (file(sq) < FILE_H && s[sq + 1] == xpawn)
+      is_passed = false;
+  }
+
+  // Isolated and/or backward pawn.
+  bool is_weak(true);  // we will be trying to disprove that
+
+  // Going backwards and checking whether pawn has support.
+  unsigned steps(0);
+  for (square sq(i); rank(c, sq); sq -= step_fwd(c), ++steps)
+  {
+    if (file(sq) > FILE_A && s[sq - 1] == pawn)
+    {
+      is_weak = false;
+      break;
+    }
+    if (file(sq) < FILE_H && s[sq + 1] == pawn)
+    {
+      is_weak = false;
+      break;
+    }
+  }
+
+  if (is_passed)
+  {
+    const bool is_directly_supported(!is_weak && steps <= 1);
+    const auto r(rank(c, i));
+
+    // In the endgame we score passed pawns higher if they are protected or if
+    // their advance is supported by friendly pawns.
+    if (is_directly_supported)
+      e.pawns_e[c] += db.pawn_protected_passed_e(r);
+    else
+      e.pawns_e[c] += db.pawn_passed_e(r);
+  }
+
+  if (is_weak)
+  {
+    const auto f(file(i));
+    if (!is_opposed
+        && (s.piece_count(!c, piece::rook) || s.piece_count(!c, piece::queen)))
+      e.pawns_e[c] += db.pawn_weak_open_e(f);
+    else
+      e.pawns_e[c] += db.pawn_weak_e(f);
+  }
+}
+
+void eval_pawn_m(const state &s, square i, score_vector &e)
+{
+  assert(s[i].type() == piece::pawn);
+  const color c(s[i].color());
+  const piece pawn(s[i]), xpawn(!c, piece::pawn);
+
+  e.pcsq_m[c] += db.pcsq_m(pawn, i);
+
+  bool is_passed(  true);  // we will be trying to disprove that
+  bool is_opposed(false);
+
+  // The loop below detects doubled pawns, passed pawns and sets a flag on
+  // finding that our pawn is opposed by enemy pawn.
+  for (square sq(i + step_fwd(c)); rank(c, sq) < 7; sq += step_fwd(c))
+  {
+    if (s[sq].type() == piece::pawn)
+    {
+      is_passed = false;
+
+      if (s[sq] == pawn)
+        e.pawns_m[c] += db.pawn_doubled_m();
+      else
+      {
+        assert(s[sq] == xpawn);
+        is_opposed = true;
+        break;
+      }
+    }
+
+    if (file(sq) > FILE_A && s[sq - 1] == xpawn)
+      is_passed = false;
+    else if (file(sq) < FILE_H && s[sq + 1] == xpawn)
+      is_passed = false;
+  }
+
+  // Isolated and/or backward pawn.
+  bool is_weak(true);  // we will be trying to disprove that
+
+  // Going backwards and checking whether pawn has support.
+  unsigned steps(0);
+  for (square sq(i); rank(c, sq); sq -= step_fwd(c), ++steps)
+  {
+    if (file(sq) > FILE_A && s[sq - 1] == pawn)
+    {
+      is_weak = false;
+      break;
+    }
+    if (file(sq) < FILE_H && s[sq + 1] == pawn)
+    {
+      is_weak = false;
+      break;
+    }
+  }
+
+  if (is_passed)
+    e.pawns_m[c] += db.pawn_passed_m(rank(c, i));
+
+  if (is_weak)
+  {
+    const auto f(file(i));
+    e.pawns_m[c] += is_opposed ? db.pawn_weak_m(f) : db.pawn_weak_open_m(f);
+  }
 }
 
 void eval_e(const state &s, score_vector &e)
 {
   for (square i(0); i < 64; ++i)
     if (s[i] != EMPTY)
-      e.pcsq_e[s[i].color()] += db.pcsq_e(s[i], i);
+      switch (s[i].id())
+      {
+      case BPAWN.id():
+      case WPAWN.id():
+        eval_pawn_e(s, i, e);
+        break;
 
-  e.eg = e.pcsq_e[s.side()] - e.pcsq_e[!s.side()];
+      default:
+        e.pcsq_e[s[i].color()] += db.pcsq_e(s[i], i);
+      }
+
+  e.eg = e.pcsq_e[s.side()] - e.pcsq_e[!s.side()]
+         + e.pawns_e[s.side()] - e.pawns_e[!s.side()];
+}
+
+void eval_m(const state &s, score_vector &e)
+{
+  for (square i(0); i < 64; ++i)
+    if (s[i] != EMPTY)
+      switch (s[i].id())
+      {
+      case BPAWN.id():
+      case WPAWN.id():
+        eval_pawn_m(s, i, e);
+        break;
+
+      default:
+        e.pcsq_m[s[i].color()] += db.pcsq_m(s[i], i);
+      }
+
+  eval_king_shield(s, e);
+
+  e.mg = e.pcsq_m[s.side()] - e.pcsq_m[!s.side()]
+         + e.king_shield[s.side()] - e.king_shield[!s.side()]
+         + e.pawns_m[s.side()] - e.pawns_m[!s.side()];
 }
 
 // Phase index: 0 is opening, 256 endgame.
@@ -136,7 +298,7 @@ int phase256(const state &s)
 
 score_vector::score_vector(const state &s)
   : phase(), material{0, 0}, adjust_material{0, 0}, king_shield{0, 0},
-    pcsq_e{0, 0}, pcsq_m{0, 0}, eg(), mg()
+    pawns_e{0, 0}, pawns_m{0, 0}, pcsq_e{0, 0}, pcsq_m{0, 0}, eg(), mg()
 {
   eval_e(s, *this);
   eval_m(s, *this);
