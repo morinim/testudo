@@ -689,7 +689,7 @@ TEST_CASE("search_with_no_move_available")
 TEST_CASE("draw_position")
 {
   // From a game with TSCP.
-  const state p1("8/6pk/1p3pQp/q4P2/2PP4/r1PKP2P/p7/R7 b - - 14 55");
+  const state p("8/6pk/1p3pQp/q4P2/2PP4/r1PKP2P/p7/R7 b - - 14 55");
 
   cache tt;
   search s({p}, &tt);
