@@ -689,7 +689,7 @@ TEST_CASE("search_with_no_move_available")
 TEST_CASE("draw_position")
 {
   // From a game with TSCP.
-  const state p("8/6pk/1p3pQp/q4P2/2PP4/r1PKP2P/p7/R7 b - - 14 55");
+  const state p1("8/6pk/1p3pQp/q4P2/2PP4/r1PKP2P/p7/R7 b - - 14 55");
 
   cache tt;
   search s({p}, &tt);
@@ -703,11 +703,23 @@ TEST_CASE("draw_position2")
 {
   // From a game with TSCP.
   const state p("q7/6k1/1p4p1/3p4/2pP1Q1P/p1P1PK2/2P4P/8 w - - 8 61");
-  //const state p("q5k1/8/1p6/3p3Q/2pP4/p1P1PK2/2P4P/8 b - - 0 5");
 
   cache tt;
   search s({p}, &tt);
   s.max_depth = 10;
+
+  s.run(true);
+  CHECK(s.stats.score_at_root == 0);
+}
+
+TEST_CASE("draw_position3")
+{
+  // From <http://www.talkchess.com/forum/viewtopic.php?t=64800> (Uri Blass)
+  const state p("k1b5/1p1p1p1p/pPpPpPpP/P1P1P1P1/8/8/8/K1B5 w - - 0 1 ");
+
+  cache tt;
+  search s({p}, &tt);
+  s.max_depth = 102;
 
   s.run(true);
   CHECK(s.stats.score_at_root == 0);

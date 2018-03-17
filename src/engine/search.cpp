@@ -516,8 +516,8 @@ movelist search::extract_pv() const
   movelist pv;
   for (auto entry(tt_->find(s.hash()));
        entry && entry->best_move()
-       && (pv.size() <= 2 * stats.depth || pv.empty())
-       && s.mate_or_draw(&history) == state::kind::standard
+       && pv.size() <= 3 * stats.depth
+       && (s.mate_or_draw(&history) == state::kind::standard || pv.empty())
        && s.make_move(entry->best_move());)
   {
     history.push_back(s.hash());
