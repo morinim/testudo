@@ -11,13 +11,40 @@
 #include "testudo.h"
 #include "cecp.h"
 
-#include "thirdparty/cxxopts.hpp"
+#include "thirdparty/docopt/docopt.h"
 
+const char USAGE[] =
+ R"(Testudo Chess Engine
+Copyright 2018 Manlio Morini
 
-#if !defined(TESTUDO_CONFIG_TEST)
-int main()
+Usage:
+  testudo
+  testudo --test TESTSET
+  testudo -h | --help
+  testudo -v | --version
+
+Options:
+  -h --help              shows this screen and exit
+  -v --version           shows version and exit
+  --test TESTSET         an EPD test set
+)";
+
+int main(int argc, char *const argv[])
 {
-  testudo::log::setup_stream("testudo");
-  testudo::CECP::loop();
+  using namespace testudo;
+
+  log::setup_stream("testudo");
+
+  const auto args(docopt::docopt(USAGE,
+                                 {argv + 1, argv + argc},
+                                 true,      // shows help if requested
+                                 VERSION,   // version string
+                                 false));   // options first (POSIX compliant)
+
+  const auto test(args.at("--test"));
+  if (!test)
+    CECP::loop();
+  else
+  {
+  }
 }
-#endif

@@ -43,6 +43,7 @@ include_directories(SYSTEM ${TESTUDO_SOURCE_DIR}/thirdparty/)
 # Recurse into the following subdirectories (this does not actually cause
 # another cmake executable to run. The same process will walk through the
 # project's entire directory structure).
+add_subdirectory(thirdparty/docopt)
 add_subdirectory(engine)
 
 enable_testing()

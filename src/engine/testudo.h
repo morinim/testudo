@@ -22,6 +22,8 @@
 namespace testudo
 {
 
+const char VERSION[] = "0.9.0";
+
 }  // namespace testudo
 
 #endif  // include guard
