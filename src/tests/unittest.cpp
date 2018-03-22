@@ -244,6 +244,10 @@ TEST_CASE("square")
     CHECK(rank(WHITE, i) == 0);
     CHECK(rank(BLACK, i) == 7);
   }
+
+  CHECK(to_square(FILE_A, 1) == A2);
+  CHECK(to_square(FILE_E, 3) == E4);
+  CHECK(to_square(FILE_H, 9) == NO_SQ);
 }
 
 TEST_CASE("piece")
@@ -598,7 +602,6 @@ TEST_CASE("pawn_structure")
   CHECK(sv1.pawns_m[WHITE]
         == db.pawn_passed_m(1) + db.pawn_weak_open_m(FILE_A));
 
-  std::cout << "let's go\n";
   const state s2("8/P7/8/8/8/8/8/K6k w - -");
   const score_vector sv2(s2);
   CHECK(sv2.pawns_e[WHITE] == db.pawn_passed_e(6) + db.pawn_weak_e(FILE_A));
@@ -726,6 +729,22 @@ TEST_CASE("draw_position3")
 }
 
 }  // TEST_SUITE "SEARCH"
+
+TEST_CASE("SAN")
+{
+  const state s(state::setup::start);
+  const auto moves(s.moves());
+
+  CHECK(std::find(moves.begin(), moves.end(), SAN::from("d4", s))
+        != moves.end());
+  CHECK(std::find(moves.begin(), moves.end(), SAN::from("e4", s))
+        != moves.end());
+  CHECK(std::find(moves.begin(), moves.end(), SAN::from("Nc3", s))
+        != moves.end());
+  CHECK(std::find(moves.begin(), moves.end(), SAN::from("Nf3", s))
+        != moves.end());
+  CHECK(!SAN::from("Bc4", s));
+}
 
 TEST_SUITE("ADVANCED" * doctest::skip())
 {

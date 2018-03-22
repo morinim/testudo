@@ -11,10 +11,12 @@
 #if !defined(TESTUDO_UTIL_H)
 #define      TESTUDO_UTIL_H
 
+#include <string>
+
 namespace testudo
 {
 
-// Allows to ensure something gets run at the end of a scope.
+// Ensures something gets run at the end of a scope.
 //
 // An alternative, hacky, implementation is:
 //
@@ -45,6 +47,8 @@ inline final_action<F> finally(F f) noexcept
 {
   return final_action<F>(f);
 }
+
+std::string trim(const std::string &);
 
 }  // namespace testudo
 

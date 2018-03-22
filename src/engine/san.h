@@ -8,20 +8,25 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(TESTUDO_H)
-#define      TESTUDO_H
+#if !defined(TESTUDO_SAN_H)
+#define      TESTUDO_SAN_H
 
-#include "eval.h"
-#include "game.h"
-#include "log.h"
-#include "parameters.h"
-#include "random.h"
-#include "san.h"
-#include "search.h"
+#include <string>
+
+#include "move.h"
 
 namespace testudo
 {
 
-}  // namespace testudo
+class state;
+
+namespace SAN
+{
+
+move from(std::string, const state &);
+
+}  // namespace SAN
+
+} //namespace testudo
 
 #endif  // include guard

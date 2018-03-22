@@ -31,8 +31,15 @@ constexpr square A8= 0, B8= 1, C8= 2, D8= 3, E8= 4, F8= 5, G8= 6, H8= 7,
                  A2=48, B2=49, C2=50, D2=51, E2=52, F2=53, G2=54, H2=55,
                  A1=56, B1=57, C1=58, D1=59, E1=60, F1=61, G1=62, H1=63;
 
+constexpr square NO_SQ(-1);
+
 constexpr unsigned FILE_A = 0, FILE_B = 1, FILE_C = 2, FILE_D = 3,
                    FILE_E = 4, FILE_F = 5, FILE_G = 6, FILE_H = 7;
+
+inline constexpr square to_square(unsigned f, unsigned r) noexcept
+{
+  return r <= 7 && f <= 7 ? (7 - r) * 8 + f : NO_SQ;
+}
 
 inline constexpr unsigned file(square s) noexcept { return s & 7; }
 
