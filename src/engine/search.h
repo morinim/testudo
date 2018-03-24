@@ -45,8 +45,11 @@ public:
 
   struct constraints
   {
+    constraints() : max_time(0), max_depth(0), max_nodes(0) {}
+
     std::chrono::milliseconds max_time;
     unsigned                 max_depth;
+    std::uintmax_t           max_nodes;
   } constraint;
 
 private:
@@ -89,7 +92,7 @@ private:
 
   cache *tt_;
 
-  timer   search_time_;
+  timer  search_timer_;
   bool search_stopped_;
 };  // class search
 
@@ -98,9 +101,8 @@ private:
 //   current state.
 // - `tt` is a pointer to an external hash table.
 inline search::search(const std::vector<state> &states, cache *tt)
-  : stats(), constraint{std::chrono::milliseconds(0), 0},
-    root_state_(states.back()), driver_(states), tt_(tt), search_time_(),
-    search_stopped_(false)
+  : stats(), constraint(), root_state_(states.back()), driver_(states),
+    tt_(tt), search_timer_(), search_stopped_(false)
 {
   assert(!states.empty());
   assert(tt);

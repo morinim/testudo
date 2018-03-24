@@ -29,7 +29,7 @@ Copyright 2018 Manlio Morini
 
 Usage:
   testudo
-  testudo [--time=<sec>] [--depth=<d>] --test TESTSET
+  testudo [--depth=<d>] [--nodes=<n>] [--time=<sec>] --test TESTSET
   testudo -h | --help
   testudo -v | --version
 
@@ -37,7 +37,8 @@ Options:
   -h --help              shows this screen and exit
   -v --version           shows version and exit
   --test=TESTSET         an EPD test set
-  --depth=<d>            allowed maximum search depth
+  --depth=<d>            maximum allowed search depth
+  --nodes=<n>            available number of search nodes
   --time=<sec>           available search time (seconds)
 )";
 
@@ -67,6 +68,10 @@ int main(int argc, char *const argv[])
     const auto depth(args.at("--depth"));
     if (depth)
       constraints.max_depth = depth.asLong();
+
+    const auto nodes(args.at("--nodes"));
+    if (nodes)
+      constraints.max_nodes = nodes.asLong();
 
     test(testfile.asString(), constraints);
   }

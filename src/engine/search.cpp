@@ -416,7 +416,10 @@ score search::alphabeta(const state &s, score alpha, score beta,
   // how much time has been used / check for operator keyboard input.
   if (search_stopped_ || ++stats.snodes % nodes_between_checks == 0)
   {
-    search_stopped_ = search_time_.elapsed(constraint.max_time);
+    search_stopped_ =
+      search_timer_.elapsed(constraint.max_time)
+      || (constraint.max_nodes
+          && stats.snodes + stats.qnodes > constraint.max_nodes);
 
     if (search_stopped_)
       return 0;
@@ -547,8 +550,8 @@ score search::aspiration_search(score *alpha, score *beta, int draft)
   if (x <= *alpha || x >= *beta)
   {
     testudoOUTPUT << stats.depth << ' ' << (x <= *alpha ? "--" : "++") << ' '
-                  << search_time_.elapsed().count() / 10 << ' ' << stats.snodes
-                  << ' ' << stats.moves_at_root.front();
+                  << search_timer_.elapsed().count() / 10 << ' '
+                  << stats.snodes << ' ' << stats.moves_at_root.front();
 
     x = alphabeta_root(-INF, +INF, draft);
   }
@@ -581,7 +584,7 @@ move search::run(bool verbose)
     return move::sentry();
 
   default:
-    search_time_.restart();
+    search_timer_.restart();
     tt_->inc_age();
     stats.reset();
   }
@@ -606,7 +609,7 @@ move search::run(bool verbose)
     if (verbose)
     {
       testudoOUTPUT << stats.depth << ' ' << x << ' '
-                    << search_time_.elapsed().count() / 10 << ' '
+                    << search_timer_.elapsed().count() / 10 << ' '
                     << stats.snodes << ' ' << pv;
     }
 
