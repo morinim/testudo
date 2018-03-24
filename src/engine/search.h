@@ -43,8 +43,11 @@ public:
     score          score_at_root;
   } stats;
 
-  std::chrono::milliseconds max_time;
-  unsigned                 max_depth;
+  struct constraints
+  {
+    std::chrono::milliseconds max_time;
+    unsigned                 max_depth;
+  } constraint;
 
 private:
   static constexpr std::uintmax_t nodes_between_checks = 2048;
@@ -95,8 +98,9 @@ private:
 //   current state.
 // - `tt` is a pointer to an external hash table.
 inline search::search(const std::vector<state> &states, cache *tt)
-  : stats(), max_time(0), max_depth(0), root_state_(states.back()),
-    driver_(states), tt_(tt), search_time_(), search_stopped_(false)
+  : stats(), constraint{std::chrono::milliseconds(0), 0},
+    root_state_(states.back()), driver_(states), tt_(tt), search_time_(),
+    search_stopped_(false)
 {
   assert(!states.empty());
   assert(tt);

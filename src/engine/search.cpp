@@ -416,7 +416,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
   // how much time has been used / check for operator keyboard input.
   if (search_stopped_ || ++stats.snodes % nodes_between_checks == 0)
   {
-    search_stopped_ = search_time_.elapsed(max_time);
+    search_stopped_ = search_time_.elapsed(constraint.max_time);
 
     if (search_stopped_)
       return 0;
@@ -590,7 +590,7 @@ move search::run(bool verbose)
 
   score alpha(-INF), beta(+INF);
   stats.depth = 1;
-  for (unsigned max(max_depth ? max_depth : 1000);
+  for (unsigned max(constraint.max_depth ? constraint.max_depth : 1000);
        stats.depth <= max;
        ++stats.depth)
   {

@@ -696,7 +696,7 @@ TEST_CASE("draw_position")
 
   cache tt;
   search s({p}, &tt);
-  s.max_depth = 9;
+  s.constraint.max_depth = 9;
 
   s.run(true);
   CHECK(s.stats.score_at_root == 0);
@@ -709,7 +709,7 @@ TEST_CASE("draw_position2")
 
   cache tt;
   search s({p}, &tt);
-  s.max_depth = 10;
+  s.constraint.max_depth = 10;
 
   s.run(true);
   CHECK(s.stats.score_at_root == 0);
@@ -722,7 +722,7 @@ TEST_CASE("draw_position3")
 
   cache tt;
   search s({p}, &tt);
-  s.max_depth = 102;
+  s.constraint.max_depth = 102;
 
   s.run(true);
   CHECK(s.stats.score_at_root == 0);
@@ -764,7 +764,7 @@ TEST_CASE("transposition_table")
   cache tt(21);
   search s({fine70}, &tt);
 
-  s.max_time = std::chrono::milliseconds(10000);
+  s.constraint.max_time = std::chrono::milliseconds(10000);
 
   const move m(s.run(true));
   CHECK(m == move(A1, B1, 0));
@@ -777,7 +777,7 @@ TEST_CASE("quiescence_search_explosion")
 
   cache tt;
   search s({p}, &tt);
-  s.max_depth = 1;
+  s.constraint.max_depth = 1;
 
   const move m(s.run(true));
   CHECK(m);

@@ -10,12 +10,22 @@
 
 #include "testudo.h"
 #include "cecp.h"
+#include "test.h"
 
 #include "thirdparty/docopt/docopt.h"
 
 const char USAGE[] =
  R"(Testudo Chess Engine
 Copyright 2018 Manlio Morini
+         __    __    __    __
+       /__////__////__////__////
+      ////__////__////__////__/
+     /__////__////__////__////
+    ////__////__////__////__/
+   /__////__////__////__////
+  ////__////__////__////__/
+ /__////__////__////__////
+////__////__////__////__/
 
 Usage:
   testudo
@@ -41,10 +51,11 @@ int main(int argc, char *const argv[])
                                  VERSION,   // version string
                                  false));   // options first (POSIX compliant)
 
-  const auto test(args.at("--test"));
-  if (!test)
+  const auto testfile(args.at("--test"));
+  if (!testfile)
     CECP::loop();
   else
   {
+    test(testfile.asString(), {});
   }
 }

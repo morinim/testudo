@@ -52,8 +52,8 @@ move game::think(bool verbose)
 {
   search s(states_, &tt_);
 
-  s.max_depth = max_depth_;
-  s.max_time = time_info_.time_for_next_move();
+  s.constraint.max_depth = max_depth_;
+  s.constraint.max_time = time_info_.time_for_next_move();
 
   return s.run(verbose);
 }

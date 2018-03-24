@@ -84,8 +84,8 @@ std::chrono::seconds bench()
     timer t;
     search s({p.state}, &tt);
 
-    s.max_time  = milliseconds(0);
-    s.max_depth = p.depth;
+    s.constraint.max_time  = milliseconds(0);
+    s.constraint.max_depth = p.depth;
 
     const auto m(s.run(true));
 
