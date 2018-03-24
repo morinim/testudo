@@ -29,14 +29,16 @@ Copyright 2018 Manlio Morini
 
 Usage:
   testudo
-  testudo --test TESTSET
+  testudo [--time=<sec>] [--depth=<d>] --test TESTSET
   testudo -h | --help
   testudo -v | --version
 
 Options:
   -h --help              shows this screen and exit
   -v --version           shows version and exit
-  --test TESTSET         an EPD test set
+  --test=TESTSET         an EPD test set
+  --depth=<d>            allowed maximum search depth
+  --time=<sec>           available search time (seconds)
 )";
 
 int main(int argc, char *const argv[])
@@ -56,6 +58,16 @@ int main(int argc, char *const argv[])
     CECP::loop();
   else
   {
-    test(testfile.asString(), {});
+    search::constraints constraints;
+
+    const auto time(args.at("--time"));
+    if (time)
+      constraints.max_time = std::chrono::seconds(time.asLong());
+
+    const auto depth(args.at("--depth"));
+    if (depth)
+      constraints.max_depth = depth.asLong();
+
+    test(testfile.asString(), constraints);
   }
 }

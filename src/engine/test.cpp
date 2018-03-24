@@ -19,7 +19,7 @@
 namespace testudo
 {
 
-bool test(const std::string &epd, const search::constraints &)
+bool test(const std::string &epd, const search::constraints &c)
 {
   std::ifstream f(epd);
   if (!f)
@@ -81,8 +81,7 @@ bool test(const std::string &epd, const search::constraints &)
     cache tt(21);
     search s({pos}, &tt);
 
-    s.constraint.max_time  = std::chrono::milliseconds(0);
-    s.constraint.max_depth = 6;
+    s.constraint = c;
 
     testudoOUTPUT << "Analyzing " << id;
     const auto m(s.run(true));
