@@ -12,6 +12,7 @@
 #define      TESTUDO_SEARCH_H
 
 #include <cassert>
+#include <functional>
 
 #include "state.h"
 #include "timer.h"
@@ -24,6 +25,8 @@ class cache;
 class search
 {
 public:
+  // The word 'ply' denotes a half-move, that is a move of one side only.
+  // We extend/reduce in fractions of one ply (reason why `PLY != 1`).
   static constexpr int PLY = 4;
 
   search(const std::vector<state> &, cache *);
@@ -45,11 +48,13 @@ public:
 
   struct constraints
   {
-    constraints() : max_time(0), max_depth(0), max_nodes(0) {}
+    constraints() : max_time(0), max_depth(0), max_nodes(0), condition() {}
 
     std::chrono::milliseconds max_time;
     unsigned                 max_depth;
     std::uintmax_t           max_nodes;
+
+    std::function<bool()> condition;  // custom early exit condition
   } constraint;
 
 private:

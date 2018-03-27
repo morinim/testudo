@@ -616,6 +616,10 @@ move search::run(bool verbose)
     if (is_mate(x)
         || (root_state_.moves().size() == 1 && stats.depth == 5))
       break;
+
+    // Custom early exit condition.
+    if (constraint.condition && constraint.condition())
+      break;
   }
 
   return best_move;

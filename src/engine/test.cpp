@@ -13,24 +13,33 @@
 #include "log.h"
 #include "san.h"
 
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 
 namespace testudo
 {
 
+// Runs a suite of positions and produce a summary of how many it got right,
+// wrong... It uses the time / depth / nodes constraints set in `c`.
+// There is also an "early exit" counter: if the program finds and holds the
+// solution move for `2` iterations, it will terminate the search. For
+// absolutely correct results, this is not advisable as it could obviously
+// change its mind later on but, for performance analysis, this saves a lot of
+// time.
 bool test(const std::string &epd, const search::constraints &c)
 {
   std::ifstream f(epd);
   if (!f)
     return false;
 
-  std::size_t count(0);
+  std::size_t positions(0), right(0);
+
   std::string line;
   while (std::getline(f, line))
   {
     std::istringstream ss(line);
-    ++count;
+    ++positions;
 
     std::string placement, stm, castling, ep;
     if (!(ss >> placement >> stm >> castling >> ep))
@@ -73,19 +82,47 @@ bool test(const std::string &epd, const search::constraints &c)
       else {}
 
       if (id.empty())
-        id = std::to_string(count);
+        id = std::to_string(positions);
 
       testudoDEBUG << epd << " testset - position " << id << " read";
     }
 
+    const auto right_move(
+      [&](const move &m)
+      {
+        return std::find(bm.begin(), bm.end(), m) != bm.end()
+               && std::find(am.begin(), am.end(), m) == am.end();
+      });
+
     cache tt(21);
     search s({pos}, &tt);
+    unsigned correct_for(0);
 
     s.constraint = c;
+    s.constraint.condition =  // early exit condition
+      [&]()
+      {
+        if (right_move(s.stats.moves_at_root.front()))
+          ++correct_for;
+        else
+          correct_for = 0;
+
+        return correct_for == 2;
+      };
 
     testudoOUTPUT << "Analyzing " << id;
     const auto m(s.run(true));
+
+    if (right_move(m))
+    {
+      ++right;
+      testudoOUTPUT << "! (" << right << '/' << positions << " = "
+                    << static_cast<unsigned>(right * 100 / positions) << "%)";
+    }
   }
+
+  testudoOUTPUT << epd << " tested";
+  testudoOUTPUT << "Results " << right << '/' << positions;
 
   return true;
 }
