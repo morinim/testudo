@@ -412,6 +412,9 @@ score search::alphabeta(const state &s, score alpha, score beta,
   assert(alpha < beta);
   assert(draft >= PLY);
 
+  if (draft < PLY)
+    return quiesce(s, alpha, beta);
+
   // Checks to see if we have searched enough nodes that it's time to peek at
   // how much time has been used / check for operator keyboard input.
   if (search_stopped_ || ++stats.snodes % nodes_between_checks == 0)
@@ -477,9 +480,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
   {
     const auto d(new_draft(draft, in_check, m));
 
-    const auto x(d < PLY
-                 ? -quiesce(s.after_move(m), -beta, -alpha)
-                 : -alphabeta(s.after_move(m), -beta, -alpha, ply + 1, d));
+    const auto x(-alphabeta(s.after_move(m), -beta, -alpha, ply + 1, d));
 
     if (x > alpha)
     {
