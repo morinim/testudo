@@ -34,6 +34,7 @@ bool test(const std::string &epd, const search::constraints &c)
     return false;
 
   std::size_t positions(0), right(0);
+  unsigned avg_depth(0);
 
   std::string line;
   while (std::getline(f, line))
@@ -107,7 +108,7 @@ bool test(const std::string &epd, const search::constraints &c)
         else
           correct_for = 0;
 
-        return correct_for == 2;
+        return correct_for >= 2 && s.stats.depth >= 5;
       };
 
     testudoOUTPUT << "Analyzing " << id;
@@ -119,10 +120,13 @@ bool test(const std::string &epd, const search::constraints &c)
       testudoOUTPUT << "! (" << right << '/' << positions << " = "
                     << static_cast<unsigned>(right * 100 / positions) << "%)";
     }
+
+    avg_depth += s.stats.depth;
   }
 
   testudoOUTPUT << epd << " tested";
-  testudoOUTPUT << "Results " << right << '/' << positions;
+  testudoOUTPUT << "Results: " << right << '/' << positions;
+  testudoOUTPUT << "Average depth: " << avg_depth / positions;
 
   return true;
 }
