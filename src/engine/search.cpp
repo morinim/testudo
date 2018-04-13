@@ -364,18 +364,24 @@ score search::alphabeta_root(score alpha, score beta, int draft)
   {
     const auto d(new_draft(draft, in_check, moves[i]));
 
-    const auto x(d < PLY
-                 ? -quiesce(root_state_.after_move(moves[i]), -beta, -alpha)
-                 : -alphabeta(root_state_.after_move(moves[i]), -beta, -alpha,
-                              1, d));
+    const auto s1(root_state_.after_move(moves[i]));
+    score x;
+    if (i == 0)
+      x = -alphabeta(s1, -beta, -alpha, 1, d);
+    else
+    {
+      x = -alphabeta(s1, -alpha - 1, -alpha, 1, d);
+      if (alpha < x && x < beta)
+        x = -alphabeta(s1, -beta, -alpha, 1, d);
+    }
 
     if (x > alpha)
     {
       best_move = moves[i];
 
       // Moves at the root node are very important and they're kept in the
-      // best available order (given the search history).
-      std::copy_backward(&moves[0], &moves[i], &moves[i+1]);
+      // best known order (given the search history).
+      std::copy_backward(&moves[0], &moves[i], &moves[i + 1]);
       moves[0] = best_move;
 
       if (x >= beta)
@@ -475,12 +481,25 @@ score search::alphabeta(const state &s, score alpha, score beta,
 
   auto best_move(move::sentry());
   auto type(score_type::fail_low);
+  bool first(true);
 
   for (move m; (m = moves.next(driver_.killers[ply]));)
   {
     const auto d(new_draft(draft, in_check, m));
 
-    const auto x(-alphabeta(s.after_move(m), -beta, -alpha, ply + 1, d));
+    const auto s1(s.after_move(m));
+    score x;
+    if (first)
+    {
+      x = -alphabeta(s1, -beta, -alpha, ply + 1, d);
+      first = false;
+    }
+    else
+    {
+      x = -alphabeta(s1, -alpha - 1, -alpha, ply + 1, d);
+      if (alpha < x && x < beta)
+        x = -alphabeta(s1, -beta, -alpha, ply + 1, d);
+    }
 
     if (x > alpha)
     {
