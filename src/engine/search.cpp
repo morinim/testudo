@@ -58,7 +58,7 @@ constexpr int move_provider::SORT_CAPTURE;
 constexpr int move_provider::SORT_PROMOTION;
 constexpr int move_provider::SORT_KILLER;
 
-// If there is a legal move from the hash table (so we check `entry`), move
+// If there is a legal move from the hash table (check `entry`), move
 // generation can be delayed: often the move is enough to cause a cutoff and
 // save time.
 move_provider::move_provider(const state &s, const cache::slot *entry)
@@ -176,20 +176,14 @@ void search::driver::set_killer(unsigned ply, const move &m)
   killers[ply].first = m;
 }
 
-// Extraxt from the list of past known states (`ss`) a subset of hash values
-// used for repetition detection.
+// Extraxt from the list of past known states (`ss`) a set of hash values used
+// for repetition detection.
 search::driver::path_info::path_info(const std::vector<state> &ss)
 {
   assert(!ss.empty());
 
-  const state current(ss.back());
-
-  const std::size_t start(ss.size() > current.fifty()
-                          ? ss.size() - 1 - current.fifty()
-                          : 0);
-
-  for (auto i(start); i < ss.size(); ++i)
-    states.push_back(ss[i].hash());
+  std::transform(ss.begin(), ss.end(),  std::back_inserter(states),
+                 [](const state &s) { return s.hash(); });
 
   assert(!states.empty());
   assert(states.back() == current.hash());
@@ -201,17 +195,11 @@ bool search::driver::path_info::repetitions() const
 {
   assert(!states.empty());
 
-  //return
-  //  std::find(states.begin(), std::prev(states.end()), states.back())
-  //  != states.end();
-
-  const std::size_t current(states.size() - 1);
-
-  std::size_t i(current & 1);
-  while (states[i] != states[current])  // current hash is used as a sentinel
-    i += 2;
-
-  return i != current;
+  const auto current(states.size() - 1);
+  for (std::size_t i(0); i < current; ++i)
+    if (states[i] == states[current])
+      return true;
+  return false;
 }
 
 void search::driver::path_info::push(const state &current)
@@ -347,8 +335,9 @@ score search::alphabeta_root(score alpha, score beta, int draft)
 
   ++stats.snodes;
 
-  driver_.path.push(root_state_);
-  auto guard = finally([&]{ driver_.path.pop(); });
+  // Don't push the current state in the `path` vector: `root_state_` is
+  // already present.
+  assert(driver_.path.back() == root_state_.hash());
 
   auto &moves(stats.moves_at_root);
   if (moves.empty())
