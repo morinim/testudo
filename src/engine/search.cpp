@@ -23,6 +23,13 @@ namespace testudo
 namespace
 {
 
+// The following constants are used for move ordering:
+// - captures / promotions are above the `SORT_CAPTURE` level;
+// - killer moves have values near `SORT_KILLER`;
+// - other quiet moves are (quite) below the `SORT_KILLER` value.
+constexpr int SORT_CAPTURE = std::numeric_limits<int>::max() - 1000000;
+constexpr int SORT_KILLER  = SORT_CAPTURE - 1000000;
+
 /*****************************************************************************
 // A convenient class to extract one move at time from the list of the legal
 // ones.
@@ -38,13 +45,10 @@ public:
 
   move_provider(const state &, const cache::slot *);
 
-  move next(const std::pair<move, move> &);
+  move next(const driver &, unsigned);
   bool empty();
 
 private:
-  static constexpr int SORT_CAPTURE  = 100000;
-  static constexpr int SORT_PROMOTION = 60000;
-  static constexpr int SORT_KILLER   =  50000;
   void move_gen();
 
   const state           &s_;
@@ -54,11 +58,7 @@ private:
   movelist::iterator start_;
 };
 
-constexpr int move_provider::SORT_CAPTURE;
-constexpr int move_provider::SORT_PROMOTION;
-constexpr int move_provider::SORT_KILLER;
-
-// If there is a legal move from the hash table (check `entry`), move
+// If there is a legal move from the hash table (`entry != nullptr`), move
 // generation can be delayed: often the move is enough to cause a cutoff and
 // save time.
 move_provider::move_provider(const state &s, const cache::slot *entry)
@@ -96,33 +96,33 @@ bool move_provider::empty()
   return moves_.empty();
 }
 
-move move_provider::next(const std::pair<move, move> &killers)
+move move_provider::next(const driver &d, unsigned ply)
 {
   const auto move_score(
     [&](const move &m)
     {
       if (is_quiet(m))
       {
-        if (m == killers.first)
+        if (m == d.killers[ply].first)
           return SORT_KILLER;
-        if (m == killers.second)
+        if (m == d.killers[ply].second)
           return SORT_KILLER - 1;
+
+        return d.history[s_[m.from].id()][m.to];
 
         //if (m.flags & move::castle)
         //  return 1;
-
-        return 0;
       }
 
-      score v(0);
+      score v(SORT_CAPTURE);
 
       // En passant gets a score lower than other PxP moves but are anyway
       // searched in the groups of the capture moves.
       if (is_capture(m))
-        v += (s_[m.to].value() << 8) - s_[m.from].value() + SORT_CAPTURE;
+        v += (s_[m.to].value() << 8) - s_[m.from].value();
 
       if (is_promotion(m))
-        v += piece(WHITE, m.promote()).value() + SORT_PROMOTION;
+        v += piece(WHITE, m.promote()).value();
 
       return v;
     });
@@ -158,27 +158,44 @@ move move_provider::next(const std::pair<move, move> &killers)
 /*****************************************************************************
  * Driver
  *****************************************************************************/
-search::driver::driver(const std::vector<state> &ss)
-  : path(ss), killers(MAX_DEPTH)
+driver::driver(const std::vector<state> &ss)
+  : path(ss), killers(MAX_DEPTH), history()
 {
 }
 
-void search::driver::set_killer(unsigned ply, const move &m)
+void driver::upd_move_heuristics(const move &m, piece p, unsigned ply,
+                                 unsigned draft)
 {
-  assert(ply < killers.size());
+  assert(m);
   assert(is_quiet(m));
+  assert(p.id() != EMPTY);
+  assert(ply < killers.size());
+  assert(depth >= search::PLY);
 
+  // ********* Killer heuristics *********
   // Makes sure killer moves will be different before saving secondary killer
   // move.
   if (killers[ply].first != m)
     killers[ply].second = killers[ply].first;
 
   killers[ply].first = m;
+
+  // ********* History heuristics *********
+  const int depth(draft / search::PLY);
+
+  auto &slot(history[p.id()][m.to]);
+  slot += depth * depth;
+
+  // Prevents table overflow.
+  if (slot >= SORT_KILLER)
+    for (unsigned i(0); i < piece::sup_id; ++i)
+      for (unsigned sq(0); sq < 64; ++sq)
+        history[i][sq] = (history[i][sq] + 1) / 2;
 }
 
 // Extraxt from the list of past known states (`ss`) a set of hash values used
 // for repetition detection.
-search::driver::path_info::path_info(const std::vector<state> &ss)
+driver::path_info::path_info(const std::vector<state> &ss)
 {
   assert(!ss.empty());
 
@@ -191,7 +208,7 @@ search::driver::path_info::path_info(const std::vector<state> &ss)
 
 // Returns `true` if the current position (`states_.back()`) has been
 // repeated (compares the current hash value to already seen values).
-bool search::driver::path_info::repetitions() const
+bool driver::path_info::repetitions() const
 {
   assert(!states.empty());
 
@@ -202,12 +219,12 @@ bool search::driver::path_info::repetitions() const
   return false;
 }
 
-void search::driver::path_info::push(const state &current)
+void driver::path_info::push(const state &current)
 {
   states.push_back(current.hash());
 }
 
-void search::driver::path_info::pop()
+void driver::path_info::pop()
 {
   states.pop_back();
 }
@@ -286,7 +303,9 @@ movelist search::sorted_moves(const state &s)
       if (m == best_move)
         ms = 2000000;
       else if (is_capture(m))
-        ms = 20 * s[m.to].value() - s[m.from].value() + 1000000;
+        ms = (s[m.to].value() << 8) - s[m.from].value() + 1000000;
+      if (is_promotion(m))
+        ms += piece(WHITE, m.promote()).value() + 100000;
 
       return ms;
     });
@@ -472,7 +491,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
   auto type(score_type::fail_low);
   bool first(true);
 
-  for (move m; (m = moves.next(driver_.killers[ply]));)
+  for (move m; (m = moves.next(driver_, ply));)
   {
     const auto d(new_draft(draft, in_check, m));
 
@@ -499,7 +518,7 @@ score search::alphabeta(const state &s, score alpha, score beta,
         type = score_type::fail_high;
 
         if (is_quiet(m))
-          driver_.set_killer(ply, m);
+          driver_.upd_move_heuristics(m, s[m.from], ply, draft);
         break;
       }
 
@@ -596,7 +615,7 @@ move search::run(bool verbose)
     search_timer_.restart();
     tt_->inc_age();
     stats.reset();
-  }
+ }
 
   move best_move(move::sentry());
 

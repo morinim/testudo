@@ -37,7 +37,6 @@ struct move
   // A sentinel value (empty move, end of iteration...).
   static constexpr move sentry() noexcept { return move(0, 0, 0); }
   constexpr bool is_sentry() const noexcept { return from == to; }
-
   constexpr explicit operator bool() const noexcept { return !is_sentry(); }
 
   square    from;

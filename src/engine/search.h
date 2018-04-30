@@ -22,6 +22,31 @@ namespace testudo
 
 class cache;
 
+struct driver
+{
+  static constexpr unsigned MAX_DEPTH = 1024;
+
+  explicit driver(const std::vector<state> &);
+
+  // Contains information about the path leading to the node being analyzed.
+  struct path_info
+  {
+    explicit path_info(const std::vector<state> &);
+
+    bool repetitions() const;
+
+    void push(const state &);
+    void pop();
+
+    std::vector<hash_t> states;  // used for repetition detection
+  } path;
+
+  void upd_move_heuristics(const move &, piece p, unsigned, unsigned);
+
+  std::vector<std::pair<move, move>> killers;
+  int history[piece::sup_id][64];
+};
+
 class search
 {
 public:
@@ -71,29 +96,7 @@ private:
 
   state root_state_;
 
-  struct driver
-  {
-    static constexpr unsigned MAX_DEPTH = 1024;
-
-    explicit driver(const std::vector<state> &);
-
-    // Contains information about the path leading to the node being analyzed.
-    struct path_info
-    {
-      explicit path_info(const std::vector<state> &);
-
-      bool repetitions() const;
-
-      void push(const state &);
-      void pop();
-
-      std::vector<hash_t> states;  // used for repetition detection
-    } path;
-
-    void set_killer(unsigned, const move &);
-
-    std::vector<std::pair<move, move>> killers;
-  } driver_;
+  driver driver_;
 
   cache *tt_;
 
