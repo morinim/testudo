@@ -85,21 +85,21 @@ void loop()
   {
     std::cout << std::flush;
 
-    if (g.current_state().side() == g.computer_side() || analyze_mode)
+    if (analyze_mode)
+      g.think(g.show_search_info, true);
+    else if (g.current_state().side() == g.computer_side())
     {
-      const auto m(g.think(g.show_search_info, analyze_mode));
-      if (!analyze_mode)
-      {
-        if (!m)
-          g.computer_side(-1);
-        else
-        {
-          g.make_move(m);
-          print_move_or_result(g.current_state(), m);
-        }
+      const auto m(g.think(g.show_search_info, false));
 
-        continue;
+      if (!m)
+        g.computer_side(-1);
+      else
+      {
+        g.make_move(m);
+        print_move_or_result(g.current_state(), m);
       }
+
+      continue;
     }
 
     std::string line;
