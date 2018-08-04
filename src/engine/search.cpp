@@ -15,6 +15,7 @@
 #include "cache.h"
 #include "eval.h"
 #include "log.h"
+#include "nonstd.h"
 #include "util.h"
 
 namespace testudo
@@ -412,7 +413,7 @@ score search::alphabeta_root(score alpha, score beta, int draft)
 }
 
 // Recursively implements negamax alphabeta until draft is exhausted, at which
-// time it calls quiesce().
+// time it calls `quiesce()`.
 // The `ply` index measures the distance of the current node from the root
 // node, while `draft` is the remaining depth to the horizon.
 // There are various reasons to decouple the depth to horizon from the
@@ -436,7 +437,8 @@ score search::alphabeta(const state &s, score alpha, score beta,
     search_stopped_ =
       search_timer_.elapsed(constraint.max_time)
       || (constraint.max_nodes
-          && stats.snodes + stats.qnodes > constraint.max_nodes);
+          && stats.snodes + stats.qnodes > constraint.max_nodes)
+      || input_available();
 
     if (search_stopped_)
       return 0;

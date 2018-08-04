@@ -6,6 +6,13 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif ()
 
+if (UNIX)
+  add_definitions(-DUNIX)
+endif (UNIX)
+if (WIN32)
+  add_definitions(-DWIN32)
+endif (WIN32)
+
 # The general idea is to use the default values and overwrite them only for
 # specific, well experimented systems.
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU"

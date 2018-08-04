@@ -79,22 +79,27 @@ void loop()
   using namespace std::chrono_literals;
 
   game g;
+  bool analyze_mode(false);
 
   for (;;)
   {
     std::cout << std::flush;
 
-    if (g.current_state().side() == g.computer_side())
+    if (g.current_state().side() == g.computer_side() || analyze_mode)
     {
-      const auto m(g.think(g.show_search_info));
-      if (!m)
-        g.computer_side(-1);
-      else
+      const auto m(g.think(g.show_search_info, analyze_mode));
+      if (!analyze_mode)
       {
-        g.make_move(m);
-        print_move_or_result(g.current_state(), m);
+        if (!m)
+          g.computer_side(-1);
+        else
+        {
+          g.make_move(m);
+          print_move_or_result(g.current_state(), m);
+        }
+
+        continue;
       }
-      continue;
     }
 
     std::string line;
@@ -108,6 +113,16 @@ void loop()
     if (cmd == "accepted" || cmd == "easy" || cmd == "hard" || cmd == "otim"
         || cmd == "random" || cmd == "xboard")
       continue;
+    if (cmd == "analyze")
+    {
+      analyze_mode = true;
+      continue;
+    }
+    if (cmd == "exit")
+    {
+      analyze_mode = false;
+      continue;
+    }
     if (cmd == "force")
     {
       g.computer_side(-1);
@@ -118,9 +133,9 @@ void loop()
       g.computer_side(g.current_state().side());
       continue;
     }
-    if (cmd == "hint")
+    if (cmd == "hint" && !analyze_mode)
     {
-      const auto m(g.think(false));
+      const auto m(g.think(false, false));
 
       if (!m.is_sentry())
       {

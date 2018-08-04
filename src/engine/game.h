@@ -44,7 +44,7 @@ public:
   int computer_side() const { return computer_side_; }
   void computer_side(int);
 
-  move think(bool);
+  move think(bool, bool);
 
   const state &current_state() const
   { assert(!states_.empty());  return states_.back(); }

@@ -47,13 +47,23 @@ void game::max_time(std::chrono::milliseconds t)
 
 // Runs the search algoritm on the current position (given the active search
 // parameters).
+// If the `analyze_mode` is active the search continues until the interface
+// sends a command.
 // Returns the best move found (if available).
-move game::think(bool verbose)
+move game::think(bool verbose, bool analyze_mode)
 {
   search s(states_, &tt_);
 
-  s.constraint.max_depth = max_depth_;
-  s.constraint.max_time = time_info_.time_for_next_move();
+  if (analyze_mode)
+  {
+    s.constraint.max_depth = 0;
+    s.constraint.max_time  = std::chrono::milliseconds(0);
+  }
+  else
+  {
+    s.constraint.max_depth = max_depth_;
+    s.constraint.max_time  = time_info_.time_for_next_move();
+  }
 
   return s.run(verbose);
 }
