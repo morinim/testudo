@@ -12,51 +12,21 @@
 #define      TESTUDO_SEARCH_H
 
 #include <cassert>
+#include <chrono>
 #include <functional>
 
 #include "state.h"
-#include "timer.h"
 
 namespace testudo
 {
 
-class cache;
-
-struct driver
-{
-  static constexpr unsigned MAX_DEPTH = 1024;
-
-  explicit driver(const std::vector<state> &);
-
-  // Contains information about the path leading to the node being analyzed.
-  struct path_info
-  {
-    explicit path_info(const std::vector<state> &);
-
-    bool repetitions() const;
-
-    void push(const state &);
-    void pop();
-
-    std::vector<hash_t> states;  // used for repetition detection
-  } path;
-
-  void upd_move_heuristics(const move &, piece p, unsigned, unsigned);
-
-  std::vector<std::pair<move, move>> killers;
-  int history[piece::sup_id][64];
-};
-
 class search
 {
 public:
-  // The word 'ply' denotes a half-move, that is a move of one side only.
-  // We extend/reduce in fractions of one ply (reason why `PLY != 1`).
-  static constexpr int PLY = 4;
+  search();
+  virtual ~search() {}
 
-  search(const std::vector<state> &, cache *);
-
-  move run(bool);
+  virtual move run(bool) = 0;
 
   struct statistics
   {
@@ -82,40 +52,16 @@ public:
     std::function<bool()> condition;  // custom early exit condition
   } constraint;
 
-private:
-  static constexpr std::uintmax_t nodes_between_checks = 2048;
-
-  score alphabeta(const state &, score, score, unsigned, int);
-  score alphabeta_root(score, score, int);
-  score aspiration_search(score *, score *, int);
-  int new_draft(int, bool, const move &) const;
-  movelist extract_pv() const;
-  int quiesce(const state &, score, score);
-  movelist sorted_captures(const state &);
-  movelist sorted_moves(const state &);
-
-  state root_state_;
-
-  driver driver_;
-
-  cache *tt_;
-
-  timer  search_timer_;
+protected:
   bool search_stopped_;
 };  // class search
 
-// - `states` is the sequence of states reached until now. It could be a
-//   partial list (e.g. for FEN positions) but `states.back()` must contain the
-//   current state.
-// - `tt` is a pointer to an external hash table.
-inline search::search(const std::vector<state> &states, cache *tt)
-  : stats(), constraint(), root_state_(states.back()), driver_(states),
-    tt_(tt), search_timer_(), search_stopped_(false)
+// `states` is the sequence of states reached until now. It could be a partial
+// list (e.g. for FEN positions) but `states.back()` must contain the current
+// state.
+inline search::search() : stats(), constraint(), search_stopped_(false)
 {
   assert(!states.empty());
-  assert(tt);
-
-  assert(!driver_.path.states.empty());
 }
 
 }  // namespace testudo

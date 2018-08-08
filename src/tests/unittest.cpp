@@ -683,7 +683,7 @@ TEST_CASE("search_with_no_move_available")
   const state p("8/8/8/5K1k/8/8/8/7R b - -");
 
   cache tt;
-  search s({p}, &tt);
+  ab_search s({p}, &tt);
 
   const move m(s.run(true));
   CHECK(!m);
@@ -695,7 +695,7 @@ TEST_CASE("draw_position")
   const state p("8/6pk/1p3pQp/q4P2/2PP4/r1PKP2P/p7/R7 b - - 14 55");
 
   cache tt;
-  search s({p}, &tt);
+  ab_search s({p}, &tt);
   s.constraint.max_depth = 9;
 
   s.run(true);
@@ -708,7 +708,7 @@ TEST_CASE("draw_position2")
   const state p("q7/6k1/1p4p1/3p4/2pP1Q1P/p1P1PK2/2P4P/8 w - - 8 61");
 
   cache tt;
-  search s({p}, &tt);
+  ab_search s({p}, &tt);
   s.constraint.max_depth = 10;
 
   s.run(true);
@@ -721,7 +721,7 @@ TEST_CASE("draw_position3")
   const state p("k1b5/1p1p1p1p/pPpPpPpP/P1P1P1P1/8/8/8/K1B5 w - - 0 1 ");
 
   cache tt;
-  search s({p}, &tt);
+  ab_search s({p}, &tt);
   s.constraint.max_depth = 102;
 
   s.run(true);
@@ -762,7 +762,7 @@ TEST_CASE("transposition_table")
   //const state fine70("4k3/8/8/8/8/8/4P3/4K3 w - -");
 
   cache tt(21);
-  search s({fine70}, &tt);
+  ab_search s({fine70}, &tt);
 
   s.constraint.max_time = std::chrono::milliseconds(10000);
 
@@ -776,7 +776,7 @@ TEST_CASE("quiescence_search_explosion")
   const state p("1QqQqQq1/r6Q/Q6q/q6Q/B2q4/q6Q/k6K/1qQ1QqRb w - -");
 
   cache tt;
-  search s({p}, &tt);
+  ab_search s({p}, &tt);
   s.constraint.max_depth = 1;
 
   const move m(s.run(true));

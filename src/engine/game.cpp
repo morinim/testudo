@@ -10,7 +10,8 @@
 
 #include "game.h"
 #include "log.h"
-#include "search.h"
+#include "ab_search.h"
+#include "mcts_search.h"
 
 namespace testudo
 {
@@ -52,7 +53,8 @@ void game::max_time(std::chrono::milliseconds t)
 // Returns the best move found (if available).
 move game::think(bool verbose, bool analyze_mode)
 {
-  search s(states_, &tt_);
+  ab_search s(states_, &tt_);
+  //mcts_search s(states_);
 
   if (analyze_mode)
   {

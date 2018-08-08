@@ -82,7 +82,7 @@ std::chrono::seconds bench()
     cache tt(21);
 
     timer t;
-    search s({p.state}, &tt);
+    ab_search s({p.state}, &tt);
 
     s.constraint.max_time  = milliseconds(0);
     s.constraint.max_depth = p.depth;

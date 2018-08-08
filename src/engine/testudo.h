@@ -11,6 +11,7 @@
 #if !defined(TESTUDO_H)
 #define      TESTUDO_H
 
+#include "ab_search.h"
 #include "eval.h"
 #include "game.h"
 #include "log.h"

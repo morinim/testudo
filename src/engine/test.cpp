@@ -9,6 +9,7 @@
  */
 
 #include "test.h"
+#include "ab_search.h"
 #include "cache.h"
 #include "log.h"
 #include "san.h"
@@ -96,7 +97,7 @@ bool test(const std::string &epd, const search::constraints &c)
       });
 
     cache tt(21);
-    search s({pos}, &tt);
+    ab_search s({pos}, &tt);
     unsigned correct_for(0);
 
     s.constraint = c;
